@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { FinishedClipsTable } from '@/components/dashboard/cd/FinishedClipsTable';
+import FinishedClipsTable from '@/components/cd/FinishedClipsTable';
 
 export default async function CDFinishedPage() {
   const supabase = createServerSupabaseClient();

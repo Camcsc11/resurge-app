@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import SubmissionHistoryTable from '@/components/dashboard/editor/SubmissionHistoryTable';
+import SubmissionHistoryTable from '@/components/editor/SubmissionHistoryTable';
 
 export default async function EditorHistoryPage() {
   const supabase = createServerSupabaseClient();
