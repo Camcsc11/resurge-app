@@ -119,7 +119,7 @@ export default function ClipDetailModal({ clip, onClose }: ClipDetailModalProps)
                       Round {submission.round_number}
                     </p>
                     <span
-                      className={`]text-xs font-semibold px-2 py-1 rounded ${
+                      className={`text-xs font-semibold px-2 py-1 rounded ${
                         submission.status === "approved"
                           ? "bg-green-100 text-green-700"
                           : submission.status === "pending_qa"
@@ -162,5 +162,5 @@ export default function ClipDetailModal({ clip, onClose }: ClipDetailModalProps)
         </div>
       </div>
     </div>
-  
-  
+  )
+}
