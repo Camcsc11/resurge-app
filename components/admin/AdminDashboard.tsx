@@ -3,9 +3,9 @@
 import { useState } from 'react'
 import { Clip, Profile } from '@/lib/types'
 import StatusBadge from '@/components/StatusBadge'
-import ClipDetailModal from '@/components/modals/ClipDetailModal'
-import EditClipModal from 'A/components/modals/EditClipModal'
-import AddClipModal from '@/components/modals/AddClipModal'
+import ClipDetailModal from '@/components/ClipDetailModal'
+import EditClipModal from '@/components/cd/EditClipModal'
+import AddClipModal from '@/components/cd/AddClipModal'
 import { Plus, Edit2, Trash2, Film, Users, Settings } from 'lucide-react'
 
 interface AdminDashboardProps {

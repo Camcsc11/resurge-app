@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Bell } from 'lucide-react';
-import { createClient } from '@/utils/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 import { formatDistanceToNow } from 'date-fns';
 
 interface Notification {
