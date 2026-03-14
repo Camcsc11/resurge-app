@@ -1,7 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
-import { createGoogleDriveClient } from 'A/lib/google-drive/client';
-import { deleteGoogleDriveFile } from '@/lib/google-drive/helpers';
+import { deleteFile } from '@/lib/google-drive';
 
 export async function DELETE(request: NextRequest) {
   try {
@@ -28,14 +27,12 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const driveClient = createGoogleDriveClient();
-
     // Delete Google Drive files for each submission
     if (submissions && submissions.length > 0) {
       for (const submission of submissions) {
         if (submission.drive_file_id) {
           try {
-            await deleteGoogleDriveFile(driveClient, submission.drive_file_id);
+            await deleteFile(submission.drive_file_id);
           } catch (error) {
             console.error(
               `Error deleting Drive file ${submission.drive_file_id}:`,

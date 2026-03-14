@@ -136,4 +136,5 @@ export default function ClipDetailModal({
         </div>
       </div>
     </div>
-  (Š
+  );
+}
