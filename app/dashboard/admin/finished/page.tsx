@@ -3,33 +3,39 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import FinishedClipsTable from '@/components/cd/FinishedClipsTable'
 
 export default async function FinishedPage() {
-  const supabase = createServerSupabaseClient()
-  const { data: { session } } = await supabase.auth.getSession()
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
 
-  if (!session) {
-    redirect('/login')
-  }
+  if (!user) redirect('/login')
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('*')
-    .eq('id', session.user.id)
+    .select('role')
+    .eq('id', user.id)
     .single()
 
-  if (!profile || profile.role !== 'admin') {
-    redirect('/dashboard/employee-home')
-  }
+  if (!profile || profile.role !== 'admin') redirect('/dashboard')
 
-  // Fetch finished clips (approved status) with joined data
-  const { data: finishedClips } = await supabase
+  const { data: clips } = await supabase
     .from('clips')
-    .select(
-      '*, editor:profiles!editor_id(id, display_name, email), creator:profiles!creator_id(id, display_name, email)'
-    )
+    .select('*')
     .eq('status', 'approved')
-    .order('completed_at', { ascending: false })
+    .order('updated_at', { ascending: false })
+
+  const { data: tags } = await supabase
+    .from('tags')
+    .select('*')
 
   return (
-    <FinishedClipsTable clips={finishedClips || []} />
+    <div className="p-8 bg-gray-50 min-h-screen">
+      <div className="max-w-7xl mx-auto">
+        <h1 className="text-3xl font-bold text-gray-900 mb-6">Finished Clips</h1>
+        <FinishedClipsTable
+          finishedClips={clips || []}
+          tags={tags || []}
+          isAdmin={true}
+        />
+      </div>
+    </div>
   )
 }
