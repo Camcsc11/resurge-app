@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import QADashboard from '@/components/dashboard/QADashboard';
+import QADashboard from '@/components/qa/QADashboard';
 
 export default async function QAPage() {
   const supabase = createServerSupabaseClient();

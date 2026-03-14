@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { EditorDashboard } from '@/components/dashboard/editor/EditorDashboard';
+import EditorDashboard from '@/components/editor/EditorDashboard';
 
 export default async function EditorPage() {
   const supabase = createServerSupabaseClient();

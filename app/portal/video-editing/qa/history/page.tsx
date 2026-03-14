@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import QAHistory from '@/components/dashboard/QAHistory';
+import QAHistory from '@/components/qa/QAHistory';
 
 export default async function QAHistoryPage() {
   const supabase = createServerSupabaseClient();

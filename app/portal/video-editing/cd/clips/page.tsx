@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import CDClips from '@/components/dashboard/CDClips';
+import CDClips from '@/components/cd/CDClips';
 
 export default async function CDClipsPage() {
   const supabase = createServerSupabaseClient();

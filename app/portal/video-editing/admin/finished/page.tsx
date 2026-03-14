@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import AdminFinished from '@/components/dashboard/AdminFinished';
+import AdminFinished from '@/components/admin/AdminFinished';
 
 export default async function AdminFinishedPage() {
   const supabase = createServerSupabaseClient();

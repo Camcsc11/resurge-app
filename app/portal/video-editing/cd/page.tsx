@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import CDDashboard from '@/components/dashboard/CDDashboard';
+import CDDashboard from '@/components/cd/CDDashboard';
 
 export default async function CDPage() {
   const supabase = createServerSupabaseClient();

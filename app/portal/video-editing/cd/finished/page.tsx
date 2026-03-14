@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import CDFinished from '@/components/dashboard/CDFinished';
+import CDFinished from '@/components/cd/CDFinished';
 
 export default async function CDFinishedPage() {
   const supabase = createServerSupabaseClient();

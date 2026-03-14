@@ -7,7 +7,7 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   experimental: {
-    serverActions: true,
+    serverActions: {},
   },
   images: {
     domains: ['lh3.googleusercontent.com'],
