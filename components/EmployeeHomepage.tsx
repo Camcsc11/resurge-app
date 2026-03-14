@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { portals } from 'A/lib/portals';
+import { portals } from '@/lib/portals';
 import * as Icons from 'lucide-react';
 
 interface Profile {
@@ -106,4 +106,5 @@ export default function EmployeeHomepage({
         )}
       </div>
     </div>
-  (Š
+  );
+}

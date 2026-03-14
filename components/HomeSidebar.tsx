@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import NotificationBell from "./NotificationBell";
-import { portals } from "A/lib/portals";
+import { portals } from "@/lib/portals";
 
 interface HomeSidebarProps {
   profile: {
@@ -107,4 +107,5 @@ export default function HomeSidebar({ profile }: HomeSidebarProps) {
         </button>
       </div>
     </div>
-  (Š
+  );
+}
