@@ -109,7 +109,7 @@ function ReelCard({
             />
           ) : embed && (embed.platform === 'instagram' || embed.platform === 'youtube') ? (
             <iframe
-              src={isActive ? embed.embedUrl : ''}
+              src={isActive ? embed.embedUrl : 'about:blank'}
               className="w-full h-full border-0"
               allow="autoplay; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
@@ -117,7 +117,7 @@ function ReelCard({
             />
           ) : embed && embed.platform === 'tiktok' ? (
             <iframe
-              src={isActive ? embed.embedUrl : ''}
+              src={isActive ? embed.embedUrl : 'about:blank'}
               className="w-full h-full border-0"
               allow="autoplay; encrypted-media"
               allowFullScreen
@@ -245,9 +245,8 @@ export default function ReelViewer({ initialReels }: ReelViewerProps) {
         .insert({
           title,
           source_url: newUrl.trim(),
-          status: 'unassigned',
+          status: 'approved',
           platform,
-          priority: 'medium',
         })
         .select('id, title, source_url, description, thumbnail_url, status, platform, created_at');
 
@@ -326,7 +325,7 @@ export default function ReelViewer({ initialReels }: ReelViewerProps) {
           </Button>
         </div>
       ) : (
-        <div className="flex-1 flex justify-center relative">
+        <div className="flex-1 flex justify-center relative min-h-0">
           {/* Scroll container */}
           <div
             ref={containerRef}
@@ -334,7 +333,7 @@ export default function ReelViewer({ initialReels }: ReelViewerProps) {
             style={{ scrollbarWidth: 'none' }}
           >
             {reels.map((reel, i) => (
-              <div key={reel.id} className="w-full h-full">
+              <div key={reel.id} className="w-full h-full snap-start snap-always shrink-0">
                 <ReelCard reel={reel} isActive={i === activeIndex} />
               </div>
             ))}
