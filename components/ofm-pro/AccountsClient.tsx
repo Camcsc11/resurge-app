@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "A/lib/supabase/client";
+import { createClient } from "@/lib/supabase/client";
 import { BarChart3, Plus, Search, X } from "lucide-react";
 
 const PLATFORMS = ["all", "instagram", "tiktok", "twitter", "youtube", "threads", "reddit"] as const;

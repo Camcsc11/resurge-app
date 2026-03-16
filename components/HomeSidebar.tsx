@@ -15,7 +15,7 @@ import {
   Link as LinkIcon,
   Globe,
 } from "lucide-react";
-import { createClient } from "A/lib/supabase/client";
+import { createClient } from "@/lib/supabase/client";
 import NotificationBell from "./NotificationBell";
 
 interface HomeSidebarProps {

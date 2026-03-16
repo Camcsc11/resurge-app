@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
-import { createServerSupabaseClient } from "A/lib/supabase/server";
-import CreatorDetailClient from "A/components/ofm-pro/CreatorDetailClient";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import CreatorDetailClient from "@/components/ofm-pro/CreatorDetailClient";
 
 export default async function CreatorDetailPage({ params }: { params: { id: string } }) {
   const supabase = await createServerSupabaseClient();

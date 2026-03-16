@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "A/lib/supabase/client";
+import { createClient } from "@/lib/supabase/client";
 import { BarChart3, ArrowUp, ArrowDown, TrendingUp } from "lucide-react";
 
 interface Trend {

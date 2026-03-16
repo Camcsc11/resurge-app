@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createServerSupabaseClient } from "A/lib/supabase/server";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import TrendsClient from "@/components/ofm-pro/TrendsClient";
 
 export default async function TrendsPage() {

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createServerSupabaseClient } from "A/lib/supabase/server";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import AccountsClient from "@/components/ofm-pro/AccountsClient";
 
 export default async function AccountsPage() {

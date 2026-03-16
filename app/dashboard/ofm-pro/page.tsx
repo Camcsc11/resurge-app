@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createServerSupabaseClient } from "A/lib/supabase/server";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import OfmDashboard from "@/components/ofm-pro/OfmDashboard";
 
 export default async function OfmProHomePage() {

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createServerSupabaseClient } from "A/lib/supabase/server";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import GeoClient from "@/components/ofm-pro/GeoClient";
 
 export default async function GeoPage() {
