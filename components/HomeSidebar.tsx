@@ -138,7 +138,7 @@ export default function HomeSidebar({ profile }: HomeSidebarProps) {
         </div>
       </div>
 
-      {/* Mode Toggle — Admin Only */}
+      {/* Mode Toggle â Admin Only */}
       {isAdmin && (
         <div className="px-3 pt-3 pb-1">
           <div className="flex rounded-lg bg-gray-100 p-0.5">
@@ -212,4 +212,5 @@ export default function HomeSidebar({ profile }: HomeSidebarProps) {
       </div>
     </div>
   
-) 
+)
+}
