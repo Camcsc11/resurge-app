@@ -2,8 +2,20 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, LogOut, Users, Video, Calendar, DollarSign, MessageSquare, Briefcase, ClipboardCheck, FolderCheck } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { useState, useEffect } from "react";
+import {
+  LayoutDashboard,
+  LogOut,
+  Users,
+  Video,
+  FolderCheck,
+  ClipboardCheck,
+  BarChart3,
+  TrendingUp,
+  Link as LinkIcon,
+  Globe,
+} from "lucide-react";
+import { createClient } from "A/lib/supabase/client";
 import NotificationBell from "./NotificationBell";
 
 interface HomeSidebarProps {
@@ -35,6 +47,15 @@ const cdLinks = [
 const qaLinks = [
   { name: "Review Queue", href: "/dashboard/qa", icon: ClipboardCheck },
   { name: "History", href: "/dashboard/qa/history", icon: FolderCheck },
+];
+
+const ofmProLinks = [
+  { name: "OFM Home", href: "/dashboard/ofm-pro", icon: LayoutDashboard },
+  { name: "Accounts", href: "/dashboard/ofm-pro/accounts", icon: BarChart3 },
+  { name: "Trends", href: "/dashboard/ofm-pro/trends", icon: TrendingUp },
+  { name: "Deep Links", href: "/dashboard/ofm-pro/links", icon: LinkIcon },
+  { name: "Creators", href: "/dashboard/ofm-pro/creators", icon: Users },
+  { name: "Geo Analytics", href: "/dashboard/ofm-pro/geo", icon: Globe },
 ];
 
 function getLinksForRole(role: string) {
@@ -71,7 +92,31 @@ export default function HomeSidebar({ profile }: HomeSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
-  const links = getLinksForRole(profile.role);
+  const isAdmin = profile.role === "admin";
+
+  const [activeMode, setActiveMode] = useState<"resurge" | "ofm">("resurge");
+
+  useEffect(() => {
+    if (isAdmin) {
+      const saved = localStorage.getItem("sidebar_mode");
+      if (saved === "ofm") setActiveMode("ofm");
+    }
+  }, [isAdmin]);
+
+  useEffect(() => {
+    if (isAdmin && pathname.startsWith("/dashboard/ofm-pro")) {
+      setActiveMode("ofm");
+      localStorage.setItem("sidebar_mode", "ofm");
+    }
+  }, [pathname, isAdmin]);
+
+  const handleModeSwitch = (mode: "resurge" | "ofm") => {
+    setActiveMode(mode);
+    localStorage.setItem("sidebar_mode", mode);
+  };
+
+  const resurgeLinks = getLinksForRole(profile.role);
+  const links = activeMode === "ofm" ? ofmProLinks : resurgeLinks;
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -93,12 +138,41 @@ export default function HomeSidebar({ profile }: HomeSidebarProps) {
         </div>
       </div>
 
+      {/* Mode Toggle — Admin Only */}
+      {isAdmin && (
+        <div className="px-3 pt-3 pb-1">
+          <div className="flex rounded-lg bg-gray-100 p-0.5">
+            <button
+              onClick={() => handleModeSwitch("resurge")}
+              className={`flex-1 text-xs font-medium py-1.5 rounded-md transition-all ${
+                activeMode === "resurge"
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Resurge
+            </button>
+            <button
+              onClick={() => handleModeSwitch("ofm")}
+              className={`flex-1 text-xs font-medium py-1.5 rounded-md transition-all ${
+                activeMode === "ofm"
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              OFM Pro
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         <div className="space-y-1">
           {links.map((link) => {
             const Icon = link.icon;
-            const isActive = pathname === link.href || pathname.startsWith(link.href + "/");
+            const isActive =
+              pathname === link.href || pathname.startsWith(link.href + "/");
             return (
               <Link
                 key={link.href}
@@ -121,8 +195,12 @@ export default function HomeSidebar({ profile }: HomeSidebarProps) {
       <div className="border-t border-gray-200 p-4">
         <NotificationBell />
         <div className="mt-3">
-          <p className="text-sm font-medium text-brand-700">{profile.full_name}</p>
-          <p className="text-xs text-gray-500 capitalize">{getRoleLabel(profile.role)}</p>
+          <p className="text-sm font-medium text-brand-700">
+            {profile.full_name}
+          </p>
+          <p className="text-xs text-gray-500 capitalize">
+            {getRoleLabel(profile.role)}
+          </p>
         </div>
         <button
           onClick={handleLogout}
@@ -133,5 +211,5 @@ export default function HomeSidebar({ profile }: HomeSidebarProps) {
         </button>
       </div>
     </div>
-  );
-}
+  
+) 
