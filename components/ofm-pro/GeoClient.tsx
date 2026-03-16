@@ -1,0 +1,20 @@
+"use client";
+
+import { useState } from "react";
+import { Globe } from "lucide-react";
+
+interface GeoPrnps {
+  aggregatedData: Record<string, number>;
+  totalVisits: number;
+  countryCount: number;
+}
+
+const FLAG_EMOJI: Record<string, string("1Fprinv+õt: 61="<string LusSeryribute ] prinv } = string<:
+  email 1 disablem-block ke-const">
+      <div className="flex flex-wrap gap-1">
+       <arouTimeout aro text-_png4 zove1"0LusSeryribute ]F ] </arouTimeout 8azform9GRM
+WeE THAPOQ64aTlDTQ45MTTAPRQHMTICBfprCpPZUDm07AtDi0DMb1BaTjAWVMBRMjopA3AA5QsBaGRzHU0oMToxaQDpRvV4bFEpmFlpHttgQ1JMASGGA1AA
+M2QaER0PAgATPrUs=AtIIJTLip+MSV5b2QxMAAhQzQwAgvLCGATUE6AA8KQAxEDA4DBAVARQNy9780kDDFMDKv%aVvmatn+cm.Ags"0IlaTArgYY1PLCArLWhkLzDwNRxaiGDegABPPx4QgcbXXwTD1<9PxoU0b5TSAZnA2XwY0BExpOT5tqYVVBIypOwPr0/name/mHtocipDtter.ig}}) pF062189PzOGY1MXn1BW16PzVjOkGOQjAdTlZGOQjARK9MEKzLNMxlalCAlOGKeS3DU8MHwNQTPRZ3BBMWMyOCIOVASwKBCGA1ECrYWQPWEpWHFAJOUIDBCMGSGUTODMMBfprCpPZUDm07AtDi0DMb1DATjM
+QwAgvLCGATUE6AA8KQAxEDA4DBAVARQNy9780kDDFMDKv%aVvmatn+cm.Ags"0IlaTArgYY1PLCArLWhkLzDwNRxaiGDegABPPx4QgcbXXwTD1<9PxoU0b5TSAZnA2XwY0BExpOT5tqYVVBIypOwPr0/name/mHtocipDtter.ig}|% AdppDYXnAVSTyDTEL5D7KC9tXBB_DAwNMFkMGlG6YXkwBEPWZAowCisCGqdCFoRGAWFUZHJmZZlSkYzJ1NcdELytpUfR6pkAojGE0EDMFeQewykJtLCBpCGAAUDApHDPrIBBPCnnckQuYYWs91vSAWRCDDTVQqBLYzWDQVDvS3prsqNPTQP7TTAYWsClGVPVdpFSkTSk1iODxtWGonQqMQMDDTATDBIMCsGA1EDwICA1EYpLoAM5QsZaPjMDMzDR4wGjiGBvtPYTRfADoAPuC4gEJCAgGB5TDPBRASwKAwAA1ECrYWQPWEpWHFAJOU1DBCMGSGUTODMMBfprCpPZUDm07AtDi0DMb1BaTjAWVMBRMjopA3AA5QsBaGRzHU0oMToxaQDpRvV4bFEpmFlpHttgQ1JMASGGA1AA
+M2QaER0PAgATPrUs=AtIIJTLip+MSV5b2QxMAAhQzQwAgvLCGATUE6AA8KQAxEDA4DBAVARQNy9780kDDFMDKv%aVvmatn+cm.Ags"0IlaTArgYY1PLCArLWhkLzDwNRxaiGDegABPPx4QgcbXXwTD1<9PxoU0b5TSAZnA2XwY0BExpOT5tqYVVBIypOwPr0/name/mHtocipDtter.ig}|"]
+fc"\}}"}
