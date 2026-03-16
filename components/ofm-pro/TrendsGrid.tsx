@@ -48,10 +48,26 @@ function timeAgo(dateStr: string): string {
    card's resting-state preview (replaces static image thumbnails). */
 function VideoPreview({ src }: { src: string }) {
   const ref = useRef<HTMLVideoElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
 
+  // Only play when card scrolls into view
   useEffect(() => {
     const v = ref.current;
     if (!v) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsVisible(entry.isIntersecting);
+        if (entry.isIntersecting) {
+          v.play().catch(() => {});
+        } else {
+          v.pause();
+        }
+      },
+      { threshold: 0.3 }
+    );
+
+    observer.observe(v);
 
     const handleTimeUpdate = () => {
       if (v.currentTime >= 2) {
@@ -60,9 +76,9 @@ function VideoPreview({ src }: { src: string }) {
     };
 
     v.addEventListener('timeupdate', handleTimeUpdate);
-    v.play().catch(() => {});
 
     return () => {
+      observer.disconnect();
       v.removeEventListener('timeupdate', handleTimeUpdate);
     };
   }, [src]);
@@ -70,7 +86,7 @@ function VideoPreview({ src }: { src: string }) {
   return (
     <video
       ref={ref}
-      src={src}
+      src={src + '#t=0.1'}
       className="w-full h-full object-cover"
       muted
       playsInline
