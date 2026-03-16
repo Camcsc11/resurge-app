@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 
 interface Reel {
   id: string;
@@ -43,6 +43,42 @@ function timeAgo(dateStr: string): string {
   return `${months} month${months > 1 ? 's' : ''} ago`;
 }
 
+/* ── Video Preview Thumbnail ──────────────────────────────────
+   Plays a 2-second muted loop of the start of the reel as the
+   card's resting-state preview (replaces static image thumbnails). */
+function VideoPreview({ src }: { src: string }) {
+  const ref = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const v = ref.current;
+    if (!v) return;
+
+    const handleTimeUpdate = () => {
+      if (v.currentTime >= 2) {
+        v.currentTime = 0;
+      }
+    };
+
+    v.addEventListener('timeupdate', handleTimeUpdate);
+    v.play().catch(() => {});
+
+    return () => {
+      v.removeEventListener('timeupdate', handleTimeUpdate);
+    };
+  }, [src]);
+
+  return (
+    <video
+      ref={ref}
+      src={src}
+      className="w-full h-full object-cover"
+      muted
+      playsInline
+      preload="metadata"
+    />
+  );
+}
+
 function ReelCard({ reel }: { reel: Reel }) {
   const [isHovered, setIsHovered] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
@@ -81,8 +117,10 @@ function ReelCard({ reel }: { reel: Reel }) {
       onMouseLeave={handleMouseLeave}
     >
       <div className="aspect-[9/16] relative overflow-hidden">
-        {/* Thumbnail - always present as base layer */}
-        {reel.thumbnail_url ? (
+        {/* Preview: 2-sec video loop if source_url exists, else thumbnail, else placeholder */}
+        {reel.source_url ? (
+          <VideoPreview src={reel.source_url} />
+        ) : reel.thumbnail_url ? (
           <img
             src={reel.thumbnail_url}
             alt={reel.title}
@@ -97,7 +135,7 @@ function ReelCard({ reel }: { reel: Reel }) {
           </div>
         )}
 
-        {/* Video overlay - mounts on hover, crossfades in when buffered */}
+        {/* Full video overlay - mounts on hover, crossfades in when buffered */}
         {isHovered && reel.source_url && (
           <video
             ref={videoRef}
@@ -203,10 +241,189 @@ function ReelCard({ reel }: { reel: Reel }) {
   );
 }
 
+/* ── Add Reel Modal ──────────────────────────────────────────── */
+function AddReelModal({ onClose, onAdd }: { onClose: () => void; onAdd: (reel: Reel) => void }) {
+  const [sourceUrl, setSourceUrl] = useState('');
+  const [title, setTitle] = useState('');
+  const [creatorHandle, setCreatorHandle] = useState('');
+  const [platform, setPlatform] = useState('instagram');
+  const [description, setDescription] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async () => {
+    if (!sourceUrl.trim()) {
+      setError('Video URL is required');
+      return;
+    }
+    setSubmitting(true);
+    setError('');
+    try {
+      const res = await fetch('/api/reels', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          source_url: sourceUrl.trim(),
+          title: title.trim() || 'Untitled Reel',
+          creator_handle: creatorHandle.trim() || 'anonymous',
+          platform,
+          description: description.trim(),
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to add reel');
+      }
+      const { reel } = await res.json();
+      onAdd(reel);
+      onClose();
+    } catch (err: any) {
+      setError(err.message || 'Something went wrong');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+
+      {/* Modal */}
+      <div className="relative bg-[#0f1729] border border-[#2a3a4a] rounded-2xl w-full max-w-lg mx-4 p-6 shadow-2xl">
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+
+        <h2 className="text-xl font-bold text-white mb-1">Add Reel</h2>
+        <p className="text-gray-400 text-sm mb-5">Paste a video URL and it will show up in the grid with a live preview.</p>
+
+        {error && (
+          <div className="mb-4 bg-red-500/10 border border-red-500/30 text-red-400 text-sm px-4 py-2.5 rounded-lg">
+            {error}
+          </div>
+        )}
+
+        <div className="space-y-4">
+          {/* Video URL */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1.5">Video URL *</label>
+            <input
+              type="url"
+              value={sourceUrl}
+              onChange={(e) => setSourceUrl(e.target.value)}
+              placeholder="https://videos.pexels.com/... or any direct video link"
+              className="w-full bg-[#1a2332] border border-[#2a3a4a] text-white px-3 py-2.5 rounded-lg text-sm placeholder-gray-500 focus:outline-none focus:border-blue-500/60 transition-colors"
+            />
+          </div>
+
+          {/* Title */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1.5">Title</label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="pool day hits different"
+              className="w-full bg-[#1a2332] border border-[#2a3a4a] text-white px-3 py-2.5 rounded-lg text-sm placeholder-gray-500 focus:outline-none focus:border-blue-500/60 transition-colors"
+            />
+          </div>
+
+          {/* Creator Handle + Platform row */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1.5">Creator Handle</label>
+              <input
+                type="text"
+                value={creatorHandle}
+                onChange={(e) => setCreatorHandle(e.target.value)}
+                placeholder="jasmine.xoxx"
+                className="w-full bg-[#1a2332] border border-[#2a3a4a] text-white px-3 py-2.5 rounded-lg text-sm placeholder-gray-500 focus:outline-none focus:border-blue-500/60 transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1.5">Platform</label>
+              <select
+                value={platform}
+                onChange={(e) => setPlatform(e.target.value)}
+                className="w-full bg-[#1a2332] border border-[#2a3a4a] text-white px-3 py-2.5 rounded-lg text-sm focus:outline-none focus:border-blue-500/60 transition-colors appearance-none cursor-pointer"
+                style={{
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E")`,
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'right 8px center',
+                  backgroundSize: '16px',
+                }}
+              >
+                <option value="instagram">Instagram</option>
+                <option value="tiktok">TikTok</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1.5">Description</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Living for this weather rn"
+              rows={2}
+              className="w-full bg-[#1a2332] border border-[#2a3a4a] text-white px-3 py-2.5 rounded-lg text-sm placeholder-gray-500 focus:outline-none focus:border-blue-500/60 transition-colors resize-none"
+            />
+          </div>
+        </div>
+
+        {/* Video preview */}
+        {sourceUrl && (
+          <div className="mt-4 rounded-lg overflow-hidden border border-[#2a3a4a] aspect-video bg-black">
+            <video
+              src={sourceUrl}
+              className="w-full h-full object-contain"
+              muted
+              autoPlay
+              loop
+              playsInline
+            />
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex justify-end gap-3 mt-6">
+          <button
+            onClick={onClose}
+            className="px-5 py-2.5 text-sm text-gray-400 hover:text-white transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={submitting || !sourceUrl.trim()}
+            className="px-5 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-500 disabled:bg-blue-600/40 disabled:text-white/40 rounded-lg transition-colors"
+          >
+            {submitting ? 'Adding...' : 'Add Reel'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Main Grid ───────────────────────────────────────────────── */
 export default function TrendsGrid({ initialReels }: TrendsGridProps) {
-  const [reels] = useState<Reel[]>(initialReels);
+  const [reels, setReels] = useState<Reel[]>(initialReels);
   const [timeFilter, setTimeFilter] = useState<'day' | 'week' | 'month'>('day');
   const [sortBy, setSortBy] = useState('trending');
+  const [showAddModal, setShowAddModal] = useState(false);
+
+  const handleAddReel = (newReel: Reel) => {
+    setReels((prev) => [newReel, ...prev]);
+  };
 
   const sortedReels = useMemo(() => {
     const sorted = [...reels];
@@ -256,7 +473,9 @@ export default function TrendsGrid({ initialReels }: TrendsGridProps) {
                 key={f}
                 onClick={() => setTimeFilter(f)}
                 className={`px-5 py-2 text-sm font-medium capitalize transition-colors ${
-                  timeFilter === f ? 'bg-white text-black' : 'text-gray-400 hover:text-white'
+                  timeFilter === f
+                    ? 'bg-white text-black'
+                    : 'text-gray-400 hover:text-white'
                 }`}
               >
                 {f}
@@ -264,14 +483,20 @@ export default function TrendsGrid({ initialReels }: TrendsGridProps) {
             ))}
           </div>
 
-          <button className="ml-auto flex items-center gap-2 bg-[#1a2332] border border-[#2a3a4a] text-gray-300 hover:text-white px-4 py-2 rounded-lg text-sm transition-colors">
+          {/* Add Reel button */}
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="ml-auto flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+          >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Add Reel
+          </button>
+
+          <button className="flex items-center gap-2 bg-[#1a2332] border border-[#2a3a4a] text-gray-300 hover:text-white px-4 py-2 rounded-lg text-sm transition-colors">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
             </svg>
             Filters
           </button>
@@ -286,7 +511,7 @@ export default function TrendsGrid({ initialReels }: TrendsGridProps) {
               </svg>
             </div>
             <h2 className="text-xl font-semibold text-white mb-2">No trending reels</h2>
-            <p className="text-gray-400 max-w-sm">Check back later for trending content.</p>
+            <p className="text-gray-400 max-w-sm">Click &quot;Add Reel&quot; to start adding content.</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
@@ -296,6 +521,14 @@ export default function TrendsGrid({ initialReels }: TrendsGridProps) {
           </div>
         )}
       </div>
+
+      {/* Add Reel Modal */}
+      {showAddModal && (
+        <AddReelModal
+          onClose={() => setShowAddModal(false)}
+          onAdd={handleAddReel}
+        />
+      )}
     </div>
   );
 }
