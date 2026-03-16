@@ -1,25 +1,28 @@
-import { redirect } from "next/navigation";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
-import TrendsClient from "@/components/ofm-pro/TrendsClient";
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+import ReelViewer from '@/components/ofm-pro/ReelViewer';
 
 export default async function TrendsPage() {
-  const supabase = await createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const supabase = createServerSupabaseClient();
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
+  try {
+    const { data: reels, error } = await supabase
+      .from('ofm_reels')
+      .select(
+        'id, title, source_url, description, thumbnail_url, status, platform, created_at'
+      )
+      .not('source_url', 'is', null)
+      .neq('source_url', '')
+      .order('created_at', { ascending: false });
 
-  if (!profile || profile.role !== "admin") redirect("/dashboard");
+    if (error) throw error;
 
-  const { data: trends } = await supabase
-    .from("ofm_trends")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
-
-  return <TrendsClient initialTrends={trends || []} />;
+    return <ReelViewer initialReels={reels || []} />;
+  } catch (error) {
+    console.error('Failed to fetch reels for viewer:', error);
+    return (
+      <div className="p-8 text-center text-red-400">
+        Failed to load reels. Please try again.
+      </div>
+    );
+  }
 }
