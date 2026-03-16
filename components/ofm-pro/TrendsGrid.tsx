@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 
 interface Reel {
   id: string;
@@ -44,19 +44,49 @@ function timeAgo(dateStr: string): string {
 }
 
 function ReelCard({ reel }: { reel: Reel }) {
+  const [isHovered, setIsHovered] = useState(false);
+  const [videoReady, setVideoReady] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleMouseEnter = useCallback(() => {
+    hoverTimer.current = setTimeout(() => {
+      setIsHovered(true);
+    }, 250);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    if (hoverTimer.current) {
+      clearTimeout(hoverTimer.current);
+      hoverTimer.current = null;
+    }
+    setIsHovered(false);
+    setVideoReady(false);
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.removeAttribute('src');
+      videoRef.current.load();
+    }
+  }, []);
+
+  const handleCanPlay = useCallback(() => {
+    setVideoReady(true);
+    videoRef.current?.play().catch(() => {});
+  }, []);
+
   return (
-    <a
-      href={reel.source_url}
-      target="_blank"
-      rel="noopener noreferrer"
+    <div
       className="group relative rounded-xl overflow-hidden bg-[#0f1729] border border-[#2a3a4a] hover:border-blue-500/40 transition-all cursor-pointer"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       <div className="aspect-[9/16] relative overflow-hidden">
+        {/* Thumbnail - always present as base layer */}
         {reel.thumbnail_url ? (
           <img
             src={reel.thumbnail_url}
             alt={reel.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            className="w-full h-full object-cover"
             loading="lazy"
           />
         ) : (
@@ -67,8 +97,34 @@ function ReelCard({ reel }: { reel: Reel }) {
           </div>
         )}
 
+        {/* Video overlay - mounts on hover, crossfades in when buffered */}
+        {isHovered && reel.source_url && (
+          <video
+            ref={videoRef}
+            src={reel.source_url}
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${videoReady ? 'opacity-100' : 'opacity-0'}`}
+            muted
+            loop
+            playsInline
+            preload="auto"
+            onCanPlay={handleCanPlay}
+          />
+        )}
+
+        {/* Buffering spinner */}
+        {isHovered && !videoReady && (
+          <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+            <div className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center">
+              <svg className="w-5 h-5 text-white animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+            </div>
+          </div>
+        )}
+
         {/* Timestamp badge */}
-        <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-sm text-white text-[10px] px-2 py-0.5 rounded flex items-center gap-1">
+        <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-sm text-white text-[10px] px-2 py-0.5 rounded flex items-center gap-1 z-20">
           <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
@@ -76,7 +132,7 @@ function ReelCard({ reel }: { reel: Reel }) {
         </div>
 
         {/* Hover action icons */}
-        <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-20">
           {[
             'M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z',
             'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4',
@@ -85,7 +141,7 @@ function ReelCard({ reel }: { reel: Reel }) {
           ].map((d, i) => (
             <button
               key={i}
-              onClick={(e) => e.preventDefault()}
+              onClick={(e) => e.stopPropagation()}
               className="w-6 h-6 bg-black/60 backdrop-blur-sm rounded flex items-center justify-center text-white/80 hover:text-white hover:bg-black/80 transition-colors"
             >
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -96,7 +152,7 @@ function ReelCard({ reel }: { reel: Reel }) {
         </div>
 
         {/* Bottom gradient overlay with stats */}
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-2.5 pt-10">
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-2.5 pt-10 z-20">
           {/* Views - right aligned */}
           <div className="flex justify-end mb-1.5">
             <span className="flex items-center gap-1 text-white text-xs font-medium">
@@ -143,7 +199,7 @@ function ReelCard({ reel }: { reel: Reel }) {
           </div>
         </div>
       </div>
-    </a>
+    </div>
   );
 }
 
