@@ -1,6 +1,31 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
+// Helper function to parse count strings like "576.9k", "2.5M", "8792" to numbers
+function parseCount(value: string | number): number {
+  if (typeof value === 'number') return value;
+  if (typeof value !== 'string') return 0;
+
+  const str = value.trim().toUpperCase();
+  const numMatch = str.match(/^([\d.]+)([KMB])?$/);
+
+  if (!numMatch) return 0;
+
+  const num = parseFloat(numMatch[1]);
+  const suffix = numMatch[2];
+
+  switch (suffix) {
+    case 'K':
+      return Math.round(num * 1000);
+    case 'M':
+      return Math.round(num * 1000000);
+    case 'B':
+      return Math.round(num * 1000000000);
+    default:
+      return Math.round(num);
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -50,5 +75,68 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ success: true });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function PUT(request: Request) {
+  try {
+    const body = await request.json();
+    const { reels } = body;
+
+    if (!Array.isArray(reels)) {
+      return NextResponse.json(
+        { error: 'reels must be an array' },
+        { status: 400 }
+      );
+    }
+
+    const supabase = createServerSupabaseClient();
+
+    // Clear existing approved reels
+    const { error: deleteError } = await supabase
+      .from('ofm_reels')
+      .delete()
+      .eq('status', 'approved');
+
+    if (deleteError) {
+      return NextResponse.json({ error: deleteError.message }, { status: 500 });
+    }
+
+    // Parse and insert new reels
+    const parsedReels = reels.map((reel) => ({
+      shortcode: reel.shortcode || '',
+      source_url: reel.source_url || '',
+      creator_handle: reel.creator_handle || 'anonymous',
+      platform: reel.platform || 'instagram',
+      posted_at_text: reel.posted_at_text || '',
+      shares: parseCount(reel.shares),
+      views: parseCount(reel.views),
+      likes: parseCount(reel.likes),
+      comments_count: parseCount(reel.comments_count),
+      status: 'approved',
+      title: `Reel by ${reel.creator_handle}`,
+      description: '',
+      thumbnail_url: '',
+    }));
+
+    const { data, error: insertError } = await supabase
+      .from('ofm_reels')
+      .insert(parsedReels)
+      .select();
+
+    if (insertError) {
+      return NextResponse.json({ error: insertError.message }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      count: data?.length || 0,
+      reels: data,
+    });
+  } catch (err: any) {
+    return NextResponse.json(
+      { error: err.message || 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
