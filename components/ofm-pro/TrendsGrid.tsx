@@ -29,7 +29,7 @@ interface Reel {
   thumbnail_url?: string;
   creator_handle: string;
   views: number;
-  shares_count: number;
+  shares: number;
   likes: number;
   comments_count: number;
   posted_at_text?: string;
@@ -167,7 +167,7 @@ function ReelCard({ reel, index, onDelete }: { reel: Reel; index: number; onDele
           <div className="flex items-center justify-between mb-1.5">
             <div className="flex items-center gap-1.5">
               <Share2 className="w-3.5 h-3.5 text-white/70" />
-              <span className="text-xs text-white/90 font-medium">{formatCount(reel.shares_count)}x</span>
+              <span className="text-xs text-white/90 font-medium">{formatCount(reel.shares)}x</span>
             </div>
             <div className="flex items-center gap-1">
               <span className="text-xs text-white/80">@</span>
@@ -239,7 +239,7 @@ export default function TrendsGrid({ initialReels }: TrendsGridProps) {
     switch (sortBy) {
       case 'trending': return sorted.sort((a, b) => b.views - a.views);
       case 'newest': return sorted;
-      case 'most_shared': return sorted.sort((a, b) => b.shares_count - a.shares_count);
+      case 'most_shared': return sorted.sort((a, b) => b.shares - a.shares);
       default: return sorted;
     }
   }, [reels, sortBy]);
@@ -261,7 +261,7 @@ export default function TrendsGrid({ initialReels }: TrendsGridProps) {
       const res = await fetch('/api/reels', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ source_url: url, creator_handle: 'unknown', views: 0, shares_count: 0, likes: 0, comments_count: 0 })
+        body: JSON.stringify({ source_url: url, creator_handle: 'unknown', views: 0, shares: 0, likes: 0, comments_count: 0 })
       });
       if (res.ok) window.location.reload();
     } catch (e) {
