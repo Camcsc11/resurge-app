@@ -45,10 +45,11 @@ function timeAgo(dateStr: string): string {
 
 /* ── Video Preview Thumbnail ──────────────────────────────────
    Plays a 2-second muted loop of the start of the reel as the
-   card's resting-state preview (replaces static image thumbnails). */
-function VideoPreview({ src }: { src: string }) {
+   card's resting-state preview. Falls back to thumbnail on error. */
+function VideoPreview({ src, fallbackThumb }: { src: string; fallbackThumb?: string }) {
   const ref = useRef<HTMLVideoElement>(null);
   const [isVisible, setIsVisible] = useState(false);
+  const [hasError, setHasError] = useState(false);
 
   // Only play when card scrolls into view
   useEffect(() => {
@@ -75,13 +76,52 @@ function VideoPreview({ src }: { src: string }) {
       }
     };
 
+    const handleError = () => setHasError(true);
+    const handleStalled = () => {
+      // If stalled for too long, show fallback
+      setTimeout(() => {
+        if (v.readyState < 2) setHasError(true);
+      }, 5000);
+    };
+
     v.addEventListener('timeupdate', handleTimeUpdate);
+    v.addEventListener('error', handleError);
+    v.addEventListener('stalled', handleStalled);
+
+    // Timeout fallback: if video hasn't started in 8s, show thumbnail
+    const timeout = setTimeout(() => {
+      if (v.readyState < 2) setHasError(true);
+    }, 8000);
 
     return () => {
       observer.disconnect();
       v.removeEventListener('timeupdate', handleTimeUpdate);
+      v.removeEventListener('error', handleError);
+      v.removeEventListener('stalled', handleStalled);
+      clearTimeout(timeout);
     };
   }, [src]);
+
+  if (hasError && fallbackThumb) {
+    return (
+      <img
+        src={fallbackThumb}
+        alt="Preview"
+        className="w-full h-full object-cover"
+        loading="lazy"
+      />
+    );
+  }
+
+  if (hasError) {
+    return (
+      <div className="w-full h-full bg-gradient-to-br from-purple-900/40 via-[#1a1a2e] to-blue-900/40 flex items-center justify-center">
+        <svg className="w-12 h-12 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+        </svg>
+      </div>
+    );
+  }
 
   return (
     <video
@@ -135,7 +175,7 @@ function ReelCard({ reel }: { reel: Reel }) {
       <div className="aspect-[9/16] relative overflow-hidden">
         {/* Preview: 2-sec video loop if source_url exists, else thumbnail, else placeholder */}
         {reel.source_url ? (
-          <VideoPreview src={reel.source_url} />
+          <VideoPreview src={reel.source_url} fallbackThumb={reel.thumbnail_url} />
         ) : reel.thumbnail_url ? (
           <img
             src={reel.thumbnail_url}
