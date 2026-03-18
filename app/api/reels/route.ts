@@ -22,14 +22,23 @@ export async function GET() {
     const supabase = createServerSupabaseClient();
     const { data, error } = await supabase
       .from('ofm_reels')
-      .select('*, ofm_creators!assigned_to(id, name)')
+      .select('*, ofm_creators!assigned_to(id, name), content_assignments!reel_id(id, status, completed_at)')
       .order('created_at', { ascending: false });
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ reels: data });
+    // Merge content_assignments status into the reel's status for display
+    const reelsWithStatus = data?.map((reel: any) => {
+      const assignment = reel.content_assignments?.[0];
+      if (assignment) {
+        reel.status = assignment.status;
+      }
+      return reel;
+    });
+
+    return NextResponse.json({ reels: reelsWithStatus });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
   }
