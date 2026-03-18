@@ -22,7 +22,7 @@ export async function GET() {
     const supabase = createServerSupabaseClient();
     const { data, error } = await supabase
       .from('ofm_reels')
-      .select('*, ofm_creators(id, name)')
+      .select('*, ofm_creators!assigned_to(id, name)')
       .order('created_at', { ascending: false });
 
     if (error) {
