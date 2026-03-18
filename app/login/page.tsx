@@ -17,14 +17,31 @@ export default function LoginPage() {
     setLoading(true);
     setError('');
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    if (error) {
-      setError(error.message);
+    if (authError) {
+      setError(authError.message);
       setLoading(false);
+      return;
+    }
+
+    // Fetch profile to determine role
+    if (authData.user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', authData.user.id)
+        .single();
+
+      if (profile?.role === 'creator') {
+        router.push('/dashboard/resurge/content');
+      } else {
+        router.push('/dashboard');
+      }
+      router.refresh();
     } else {
       router.push('/dashboard');
       router.refresh();
@@ -44,7 +61,6 @@ export default function LoginPage() {
               {error}
             </div>
           )}
-
           <div>
             <label htmlFor="email" className="label block mb-1">
               Email
@@ -59,7 +75,6 @@ export default function LoginPage() {
               required
             />
           </div>
-
           <div>
             <label htmlFor="password" className="label block mb-1">
               Password
@@ -74,7 +89,6 @@ export default function LoginPage() {
               required
             />
           </div>
-
           <button
             type="submit"
             disabled={loading}
@@ -83,7 +97,6 @@ export default function LoginPage() {
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
-
         <p className="text-center text-xs text-gray-500 mt-6">
           Contact your administrator to get access.
         </p>
