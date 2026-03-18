@@ -8,6 +8,7 @@ export default async function DashboardLayout({
   children: React.ReactNode
 }) {
   const supabase = await createServerSupabaseClient()
+
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) redirect('/login')
@@ -23,7 +24,9 @@ export default async function DashboardLayout({
   return (
     <div className="flex h-screen">
       <HomeSidebar profile={profile} />
-      <main className="flex-1 overflow-y-auto bg-gray-50 ml-60">
+      <main className="flex-1 overflow-y-auto ml-60" style={{
+        background: 'linear-gradient(180deg, #0a0a1a 0%, #1a0a2e 25%, #2d1b4e 50%, #1a1a3e 100%)'
+      }}>
         {children}
       </main>
     </div>
