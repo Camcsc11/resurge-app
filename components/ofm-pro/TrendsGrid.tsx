@@ -1,570 +1,276 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import {
-  Play, Share2, Download, Volume2, VolumeX, Bookmark, Heart, MessageCircle,
-  Trash2, Plus, Settings, ExternalLink, Check, Calendar, ChevronDown, Filter,
-  Eye, X
-} from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, Trash2, ExternalLink, X } from 'lucide-react';
 
-// ── Types ────────────────────────────────────────────────────────────────────
 interface Reel {
   id: string;
   source_url: string;
-  shortcode?: string;
-  thumbnail_url?: string;
+  title: string;
   creator_handle: string;
-  views: number;
-  shares: number;
-  likes: number;
-  comments_count: number;
-  posted_at_text?: string;
-  platform?: string;
-  status?: string;
+  status: string;
+  assigned_to: string | null;
+  assigned_at: string | null;
+  created_at: string;
+  ofm_creators?: { id: string; name: string } | null;
 }
 
-interface TrendsGridProps {
-  initialReels: Reel[];
+interface Model {
+  id: string;
+  name: string;
+  email: string;
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-function formatCount(n: number): string {
-  if (!n && n !== 0) return '0';
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
-  if (n >= 1_000) return (n / 1_000).toFixed(1).replace(/\.0$/, '') + 'k';
-  return n.toString();
+function truncateUrl(url: string, maxLen = 45) {
+  if (url.length <= maxLen) return url;
+  return url.substring(0, maxLen) + '...';
 }
 
-function getTimeAgo(text?: string): string {
-  if (!text) return '';
-  return text;
+function formatDate(dateStr: string) {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function getCardGradient(index: number): string {
-  const gradients = [
-    'from-purple-900/60 via-indigo-900/40 to-slate-900/80',
-    'from-rose-900/60 via-pink-900/40 to-slate-900/80',
-    'from-blue-900/60 via-cyan-900/40 to-slate-900/80',
-    'from-amber-900/60 via-orange-900/40 to-slate-900/80',
-    'from-emerald-900/60 via-teal-900/40 to-slate-900/80',
-    'from-violet-900/60 via-purple-900/40 to-slate-900/80',
-    'from-fuchsia-900/60 via-rose-900/40 to-slate-900/80',
-    'from-sky-900/60 via-blue-900/40 to-slate-900/80',
-    'from-red-900/60 via-rose-900/40 to-slate-900/80',
-    'from-teal-900/60 via-emerald-900/40 to-slate-900/80',
-  ];
-  return gradients[index % gradients.length];
+function getStatusBadge(status: string) {
+  switch (status) {
+    case 'pending':
+      return <span className="px-2 py-0.5 text-xs rounded-full bg-yellow-500/20 text-yellow-400">Pending</span>;
+    case 'in_progress':
+      return <span className="px-2 py-0.5 text-xs rounded-full bg-blue-500/20 text-blue-400">In Progress</span>;
+    case 'completed':
+      return <span className="px-2 py-0.5 text-xs rounded-full bg-green-500/20 text-green-400">Completed</span>;
+    case 'assigned':
+      return <span className="px-2 py-0.5 text-xs rounded-full bg-purple-500/20 text-purple-400">Assigned</span>;
+    default:
+      return <span className="px-2 py-0.5 text-xs rounded-full bg-gray-500/20 text-gray-400">{status}</span>;
+  }
 }
 
-/** Extract the shortcode from an Instagram URL */
-function getShortcode(reel: Reel): string {
-  if (reel.shortcode) return reel.shortcode;
-  const match = reel.source_url?.match(/\/(?:p|reel|reels)\/([A-Za-z0-9_-]+)/);
-  return match?.[1] || '';
-}
-
-// ── Reel Player Modal ────────────────────────────────────────────────────────
-function ReelPlayerModal({
-  reel,
-  onClose,
-}: {
-  reel: Reel;
-  onClose: () => void;
-}) {
-  const shortcode = getShortcode(reel);
-  const embedUrl = `https://www.instagram.com/p/${shortcode}/embed/`;
-  const instagramUrl =
-    reel.source_url ||
-    (shortcode ? `https://www.instagram.com/reel/${shortcode}/` : '#');
-  const overlayRef = useRef<HTMLDivElement>(null);
-
-  // Close on Escape key
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [onClose]);
-
-  return (
-    <div
-      ref={overlayRef}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
-      onClick={(e) => {
-        if (e.target === overlayRef.current) onClose();
-      }}
-    >
-      <div className="relative w-full max-w-[420px] mx-4 flex flex-col items-center">
-        {/* Close button */}
-        <button
-          onClick={onClose}
-          className="absolute -top-12 right-0 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors z-10"
-        >
-          <X className="w-5 h-5 text-white" />
-        </button>
-
-        {/* Instagram embed iframe — 9:16 ratio container */}
-        <div
-          className="w-full bg-black rounded-xl overflow-hidden border border-white/10 shadow-2xl"
-          style={{ aspectRatio: '9/16', maxHeight: '80vh' }}
-        >
-          {shortcode ? (
-            <iframe
-              src={embedUrl}
-              className="w-full h-full border-0"
-              allowFullScreen
-              allow="autoplay; encrypted-media"
-              loading="eager"
-              title={`Reel by ${reel.creator_handle}`}
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-gray-400">
-              <p>Unable to load embed — no shortcode found</p>
-            </div>
-          )}
-        </div>
-
-        {/* Bottom bar — stats + open original */}
-        <div className="w-full mt-3 flex items-center justify-between px-1">
-          <div className="flex items-center gap-4 text-white/70 text-sm">
-            <span className="flex items-center gap-1">
-              <Play className="w-3.5 h-3.5" fill="currentColor" />
-              {formatCount(reel.views)}
-            </span>
-            <span className="flex items-center gap-1">
-              <Share2 className="w-3.5 h-3.5" />
-              {formatCount(reel.shares)}x
-            </span>
-            <span className="flex items-center gap-1">
-              <Heart className="w-3.5 h-3.5" />
-              {formatCount(reel.likes)}
-            </span>
-            <span className="flex items-center gap-1">
-              <MessageCircle className="w-3.5 h-3.5" />
-              {formatCount(reel.comments_count)}
-            </span>
-          </div>
-          <a
-            href={instagramUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-sm text-blue-400 hover:text-blue-300 transition-colors"
-          >
-            <ExternalLink className="w-3.5 h-3.5" />
-            Open
-          </a>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Reel Card ────────────────────────────────────────────────────────────────
-function ReelCard({
-  reel,
-  index,
-  onDelete,
-  onPlay,
-}: {
-  reel: Reel;
-  index: number;
-  onDelete?: (id: string) => void;
-  onPlay: (reel: Reel) => void;
-}) {
-  const [saved, setSaved] = useState(false);
-  const [checked, setChecked] = useState(false);
-  const instagramUrl =
-    reel.source_url ||
-    (reel.shortcode ? `https://www.instagram.com/reel/${reel.shortcode}/` : '#');
-
-  return (
-    <div className="rounded-xl border border-white/10 bg-[#1a1a2e] text-white shadow-lg overflow-hidden relative flex flex-col">
-      {/* Video area — 9:16 aspect ratio, click to play in-app */}
-      <div
-        className="block relative w-full cursor-pointer group"
-        style={{ aspectRatio: '9/16' }}
-        onClick={() => onPlay(reel)}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') onPlay(reel);
-        }}
-      >
-        {/* Background gradient */}
-        <div
-          className={`absolute inset-0 bg-gradient-to-br ${getCardGradient(index)}`}
-        />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.3)_100%)]" />
-
-        {/* Subtle pattern overlay */}
-        <div
-          className="absolute inset-0 opacity-[0.03]"
-          style={{
-            backgroundImage:
-              'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.1) 2px, rgba(255,255,255,0.1) 4px)',
-          }}
-        />
-
-        {/* Center play button — scales on hover */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-16 h-16 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center border border-white/10 transition-transform group-hover:scale-110 group-hover:bg-black/50">
-            <Play className="w-7 h-7 text-white/80 ml-1" fill="currentColor" />
-          </div>
-        </div>
-
-        {/* Top overlay — timestamp & actions */}
-        <div className="absolute top-0 left-0 right-0 z-10 flex justify-between items-start p-3 bg-gradient-to-b from-black/60 to-transparent">
-          {/* Timestamp badge */}
-          {reel.posted_at_text ? (
-            <div className="flex items-center gap-1 text-white/90">
-              <Calendar className="w-3 h-3 flex-shrink-0" />
-              <span className="text-xs truncate">
-                {getTimeAgo(reel.posted_at_text)}
-              </span>
-            </div>
-          ) : (
-            <div />
-          )}
-
-          {/* Action buttons — stop propagation so clicks don't trigger play */}
-          <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-            <button
-              className="w-7 h-7 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center hover:bg-black/50 transition-colors"
-              title="Audio"
-            >
-              <Volume2 className="w-3.5 h-3.5 text-white/80" />
-            </button>
-            <button
-              className="w-7 h-7 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center hover:bg-black/50 transition-colors"
-              title="Download"
-            >
-              <Download className="w-3.5 h-3.5 text-white/80" />
-            </button>
-            <a
-              href={instagramUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-7 h-7 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center hover:bg-black/50 transition-colors"
-              title="Open original"
-            >
-              <ExternalLink className="w-3.5 h-3.5 text-white/80" />
-            </a>
-            <button
-              onClick={() => setSaved(!saved)}
-              className={`w-7 h-7 rounded-full backdrop-blur-sm flex items-center justify-center transition-colors ${
-                saved
-                  ? 'bg-yellow-500/40'
-                  : 'bg-black/30 hover:bg-black/50'
-              }`}
-              title="Save"
-            >
-              <Bookmark
-                className={`w-3.5 h-3.5 ${
-                  saved ? 'text-yellow-400 fill-yellow-400' : 'text-white/80'
-                }`}
-              />
-            </button>
-            <button
-              onClick={() => setChecked(!checked)}
-              className={`w-7 h-7 rounded-full backdrop-blur-sm flex items-center justify-center transition-colors ${
-                checked
-                  ? 'bg-blue-500/60'
-                  : 'bg-black/30 hover:bg-black/50'
-              }`}
-              title="Mark as reviewed"
-            >
-              <Check
-                className={`w-3.5 h-3.5 ${
-                  checked ? 'text-white' : 'text-white/80'
-                }`}
-              />
-            </button>
-          </div>
-        </div>
-
-        {/* Bottom overlay — stats */}
-        <div className="absolute bottom-0 left-0 right-0 z-10 p-3 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
-          {/* Views */}
-          <div className="flex items-center gap-1.5 mb-2">
-            <Play className="w-4 h-4 text-white/90" fill="currentColor" />
-            <span className="text-sm font-semibold text-white">
-              {formatCount(reel.views)}
-            </span>
-          </div>
-
-          {/* Shares + Creator */}
-          <div className="flex items-center justify-between mb-1.5">
-            <div className="flex items-center gap-1.5">
-              <Share2 className="w-3.5 h-3.5 text-white/70" />
-              <span className="text-xs text-white/90 font-medium">
-                {formatCount(reel.shares)}x
-              </span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="text-xs text-white/80">@</span>
-              <span className="text-xs text-white/90 font-medium truncate max-w-[120px]">
-                {reel.creator_handle}
-              </span>
-              <div className="w-3.5 h-3.5 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
-                <Check className="w-2 h-2 text-white" />
-              </div>
-            </div>
-          </div>
-
-          {/* Likes + Comments */}
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1">
-              <Heart className="w-3.5 h-3.5 text-white/60" />
-              <span className="text-xs text-white/70">
-                {formatCount(reel.likes)}
-              </span>
-            </div>
-            <div className="flex items-center gap-1">
-              <MessageCircle className="w-3.5 h-3.5 text-white/60" />
-              <span className="text-xs text-white/70">
-                {formatCount(reel.comments_count)}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Add Reel Modal ───────────────────────────────────────────────────────────
-function AddReelModal({
-  onClose,
-  onAdd,
-}: {
-  onClose: () => void;
-  onAdd: (url: string) => void;
-}) {
-  const [url, setUrl] = useState('');
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <div
-        className="bg-[#1e1e2e] rounded-xl p-6 w-full max-w-md border border-white/10"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 className="text-lg font-semibold text-white mb-4">
-          Add Instagram Reel
-        </h3>
-        <input
-          type="text"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="Paste Instagram Reel URL..."
-          className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 mb-4"
-        />
-        <div className="flex gap-3 justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={() => {
-              if (url.trim()) onAdd(url.trim());
-            }}
-            className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-          >
-            Add Reel
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Main Grid ────────────────────────────────────────────────────────────────
-export default function TrendsGrid({ initialReels }: TrendsGridProps) {
-  const [reels, setReels] = useState<Reel[]>(initialReels);
-  const [sortBy, setSortBy] = useState<'trending' | 'newest' | 'most_shared'>(
-    'trending',
-  );
-  const [timeRange, setTimeRange] = useState<'day' | 'week' | 'month'>('day');
+export default function TrendsGrid() {
+  const [reels, setReels] = useState<Reel[]>([]);
+  const [models, setModels] = useState<Model[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [syncing, setSyncing] = useState(false);
-  const [playingReel, setPlayingReel] = useState<Reel | null>(null);
+  const [reelUrl, setReelUrl] = useState('');
+  const [selectedModel, setSelectedModel] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const sortedReels = useMemo(() => {
-    const sorted = [...reels];
-    switch (sortBy) {
-      case 'trending':
-        return sorted.sort((a, b) => b.views - a.views);
-      case 'newest':
-        return sorted;
-      case 'most_shared':
-        return sorted.sort((a, b) => b.shares - a.shares);
-      default:
-        return sorted;
-    }
-  }, [reels, sortBy]);
-
-  const handleSync = useCallback(async () => {
-    setSyncing(true);
+  const fetchReels = async () => {
     try {
-      const res = await fetch('/api/reels', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reels: [] }),
-      });
-      if (res.ok) window.location.reload();
-    } catch (e) {
-      console.error('Sync failed:', e);
+      const res = await fetch('/api/reels');
+      const data = await res.json();
+      if (data.reels) setReels(data.reels);
+    } catch (err) {
+      console.error('Failed to fetch reels:', err);
     } finally {
-      setSyncing(false);
+      setLoading(false);
     }
+  };
+
+  const fetchModels = async () => {
+    try {
+      const res = await fetch('/api/models');
+      const data = await res.json();
+      if (data.models) setModels(data.models);
+    } catch (err) {
+      console.error('Failed to fetch models:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchReels();
+    fetchModels();
   }, []);
 
-  const handleAddReel = useCallback(async (url: string) => {
+  const handleAddReel = async () => {
+    if (!reelUrl.trim()) return;
+    setSubmitting(true);
+
     try {
       const res = await fetch('/api/reels', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          source_url: url,
-          creator_handle: 'unknown',
-          views: 0,
-          shares: 0,
-          likes: 0,
-          comments_count: 0,
+          source_url: reelUrl.trim(),
+          assigned_to: selectedModel || undefined,
         }),
       });
-      if (res.ok) window.location.reload();
-    } catch (e) {
-      console.error('Add failed:', e);
-    }
-    setShowAddModal(false);
-  }, []);
 
-  const handleDelete = useCallback(async (id: string) => {
+      if (res.ok) {
+        setReelUrl('');
+        setSelectedModel('');
+        setShowAddModal(false);
+        fetchReels();
+      }
+    } catch (err) {
+      console.error('Failed to add reel:', err);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
     try {
-      await fetch(`/api/reels?id=${id}`, { method: 'DELETE' });
-      setReels((prev) => prev.filter((r) => r.id !== id));
-    } catch (e) {
-      console.error('Delete failed:', e);
+      const res = await fetch(`/api/reels?id=${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setReels((prev) => prev.filter((r) => r.id !== id));
+      }
+    } catch (err) {
+      console.error('Failed to delete reel:', err);
     }
-  }, []);
+  };
 
-  const sortOptions = [
-    { value: 'trending', label: 'Trending' },
-    { value: 'newest', label: 'Newest' },
-    { value: 'most_shared', label: 'Most Shared' },
-  ];
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="w-full">
+    <div className="p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-white">Trends</h1>
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          Add Reel
+        </button>
       </div>
 
-      {/* Controls bar */}
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-        {/* Left: Sort + Time filters */}
-        <div className="flex items-center gap-2">
-          {/* Sort dropdown */}
-          <div className="relative">
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="appearance-none bg-[#1e1e2e] border border-white/10 text-white text-sm rounded-lg px-4 py-2 pr-8 focus:outline-none focus:border-blue-500/50 cursor-pointer"
-            >
-              {sortOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-          </div>
-
-          {/* Time range pills */}
-          {['day', 'week', 'month'].map((range) => (
-            <button
-              key={range}
-              onClick={() => setTimeRange(range as any)}
-              className={`px-4 py-2 text-sm rounded-lg transition-colors capitalize ${
-                timeRange === range
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-[#1e1e2e] border border-white/10 text-gray-400 hover:text-white hover:border-white/20'
-              }`}
-            >
-              {range}
-            </button>
-          ))}
-
-          {/* Filters button */}
-          <button className="flex items-center gap-1.5 px-4 py-2 text-sm bg-[#1e1e2e] border border-white/10 text-gray-400 hover:text-white hover:border-white/20 rounded-lg transition-colors">
-            <Filter className="w-3.5 h-3.5" />
-            Filters
-          </button>
-        </div>
-
-        {/* Right: Add + Sync + Settings */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-1.5 px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Add Reel
-          </button>
-          <button
-            onClick={handleSync}
-            disabled={syncing}
-            className="px-4 py-2 text-sm bg-[#1e1e2e] border border-white/10 text-gray-300 hover:text-white hover:border-white/20 rounded-lg transition-colors disabled:opacity-50"
-          >
-            {syncing ? 'Syncing...' : 'Sync'}
-          </button>
-          <button className="w-9 h-9 flex items-center justify-center bg-[#1e1e2e] border border-white/10 text-gray-400 hover:text-white hover:border-white/20 rounded-lg transition-colors">
-            <Settings className="w-4 h-4" />
-          </button>
-        </div>
+      {/* Reels Table */}
+      <div className="bg-[#1a1a2e] rounded-xl border border-white/10 overflow-hidden">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b border-white/10">
+              <th className="text-left px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Reel URL</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Assigned To</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Date Added</th>
+              <th className="text-right px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {reels.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="px-4 py-12 text-center text-gray-500">
+                  No reels added yet. Click &quot;+ Add Reel&quot; to get started.
+                </td>
+              </tr>
+            ) : (
+              reels.map((reel) => (
+                <tr key={reel.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                  <td className="px-4 py-3">
+                    <a
+                      href={reel.source_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1"
+                    >
+                      {truncateUrl(reel.source_url)}
+                      <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                    </a>
+                  </td>
+                  <td className="px-4 py-3">
+                    {reel.ofm_creators?.name ? (
+                      <span className="text-sm text-white">{reel.ofm_creators.name}</span>
+                    ) : (
+                      <span className="text-sm text-gray-500">Unassigned</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {getStatusBadge(reel.status)}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-400">
+                    {formatDate(reel.created_at)}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      onClick={() => handleDelete(reel.id)}
+                      className="text-gray-500 hover:text-red-400 transition-colors p-1"
+                      title="Delete reel"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
 
-      {/* Grid — 3 columns like OFMpro */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {sortedReels.map((reel, i) => (
-          <ReelCard
-            key={reel.id}
-            reel={reel}
-            index={i}
-            onDelete={handleDelete}
-            onPlay={setPlayingReel}
-          />
-        ))}
-      </div>
-
-      {sortedReels.length === 0 && (
-        <div className="text-center py-20 text-gray-500">
-          <p className="text-lg">No trending reels yet</p>
-          <p className="text-sm mt-2">
-            Click &quot;Add Reel&quot; or &quot;Sync&quot; to get started
-          </p>
-        </div>
-      )}
-
-      {/* Modals */}
+      {/* Add Reel Modal */}
       {showAddModal && (
-        <AddReelModal
-          onClose={() => setShowAddModal(false)}
-          onAdd={handleAddReel}
-        />
-      )}
-      {playingReel && (
-        <ReelPlayerModal
-          reel={playingReel}
-          onClose={() => setPlayingReel(null)}
-        />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-[#1a1a2e] rounded-xl border border-white/10 p-6 w-full max-w-md shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-white">Add Reel</h2>
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Reel Link */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Reel Link</label>
+                <input
+                  type="url"
+                  value={reelUrl}
+                  onChange={(e) => setReelUrl(e.target.value)}
+                  placeholder="Paste Instagram Reel URL..."
+                  className="w-full px-3 py-2 bg-[#0f0f1a] border border-white/10 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Assign Model */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Assign Model</label>
+                <select
+                  value={selectedModel}
+                  onChange={(e) => setSelectedModel(e.target.value)}
+                  className="w-full px-3 py-2 bg-[#0f0f1a] border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">— Select a model (optional) —</option>
+                  {models.length === 0 ? (
+                    <option disabled>No models available — add one in Creators</option>
+                  ) : (
+                    models.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setShowAddModal(false)}
+                  className="flex-1 px-4 py-2 border border-white/10 text-gray-300 rounded-lg text-sm font-medium hover:bg-white/5 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAddReel}
+                  disabled={!reelUrl.trim() || submitting}
+                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors"
+                >
+                  {submitting ? 'Adding...' : 'Add Reel'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
