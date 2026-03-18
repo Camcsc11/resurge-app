@@ -71,7 +71,6 @@ const ofmProLinks = [
   { name: "Accounts", href: "/dashboard/ofm-pro/accounts", icon: BarChart3 },
   { name: "Trends", href: "/dashboard/ofm-pro/trends", icon: TrendingUp },
   { name: "Deep Links", href: "/dashboard/ofm-pro/links", icon: LinkIcon },
-  { name: "Creators", href: "/dashboard/ofm-pro/creators", icon: Users },
   { name: "Geo Analytics", href: "/dashboard/ofm-pro/geo", icon: Globe },
 ];
 
