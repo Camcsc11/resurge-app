@@ -38,15 +38,15 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'id and status are required' }, { status: 400 });
     }
 
-    const validStatuses = ['pending', 'in_progress', 'completed'];
+    const validStatuses = ['pending', 'in_creation', 'finished'];
     if (!validStatuses.includes(status)) {
-      return NextResponse.json({ error: 'Invalid status. Must be: pending, in_progress, or completed' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid status. Must be: pending, in_creation, or finished' }, { status: 400 });
     }
 
     const supabase = createServerSupabaseClient();
 
     const updateData: any = { status };
-    if (status === 'completed') {
+    if (status === 'finished') {
       updateData.completed_at = new Date().toISOString();
     }
 
