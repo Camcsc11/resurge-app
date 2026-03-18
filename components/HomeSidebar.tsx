@@ -14,6 +14,8 @@ import {
   TrendingUp,
   Link as LinkIcon,
   Globe,
+  Palette,
+  User,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import NotificationBell from "./NotificationBell";
@@ -30,12 +32,20 @@ const adminLinks = [
   { name: "Home", href: "/dashboard/admin-home", icon: LayoutDashboard },
   { name: "Manage Employees", href: "/dashboard/admin/employees", icon: Users },
   { name: "Video Pipeline", href: "/dashboard/admin", icon: Video },
-  { name: "Finished Clips", href: "/dashboard/admin/finished", icon: FolderCheck },
+  {
+    name: "Finished Clips",
+    href: "/dashboard/admin/finished",
+    icon: FolderCheck,
+  },
 ];
 
 const editorLinks = [
   { name: "My Clips", href: "/dashboard/editor", icon: Video },
-  { name: "History", href: "/dashboard/editor/history", icon: ClipboardCheck },
+  {
+    name: "History",
+    href: "/dashboard/editor/history",
+    icon: ClipboardCheck,
+  },
 ];
 
 const cdLinks = [
@@ -47,6 +57,11 @@ const cdLinks = [
 const qaLinks = [
   { name: "Review Queue", href: "/dashboard/qa", icon: ClipboardCheck },
   { name: "History", href: "/dashboard/qa/history", icon: FolderCheck },
+];
+
+const creatorLinks = [
+  { name: "Content Creation", href: "/dashboard/resurge/content", icon: Palette },
+  { name: "Profile", href: "/dashboard/resurge/profile", icon: User },
 ];
 
 const ofmProLinks = [
@@ -68,6 +83,8 @@ function getLinksForRole(role: string) {
       return editorLinks;
     case "qa":
       return qaLinks;
+    case "creator":
+      return creatorLinks;
     default:
       return editorLinks;
   }
@@ -83,6 +100,8 @@ function getRoleLabel(role: string) {
       return "Editor";
     case "qa":
       return "QA Reviewer";
+    case "creator":
+      return "Creator";
     default:
       return role;
   }
@@ -92,8 +111,9 @@ export default function HomeSidebar({ profile }: HomeSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
-  const isAdmin = profile.role === "admin";
 
+  const isAdmin = profile.role === "admin";
+  const isCreator = profile.role === "creator";
   const [activeMode, setActiveMode] = useState<"resurge" | "ofm">("resurge");
 
   useEffect(() => {
@@ -123,22 +143,30 @@ export default function HomeSidebar({ profile }: HomeSidebarProps) {
     router.push("/login");
   };
 
+  // Creator-specific accent colors
+  const accentBg = isCreator ? "bg-purple-600" : "bg-brand-600";
+  const accentText = isCreator ? "text-purple-700" : "text-brand-700";
+  const accentActiveBg = isCreator ? "bg-purple-50" : "bg-brand-50";
+  const accentActiveText = isCreator ? "text-purple-700" : "text-brand-700";
+
   return (
     <div className="w-60 bg-white border-r border-gray-200 flex flex-col h-screen fixed left-0 top-0 z-40">
       {/* Logo */}
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-brand-600 rounded-lg flex items-center justify-center">
+          <div className={`w-9 h-9 ${accentBg} rounded-lg flex items-center justify-center`}>
             <span className="text-white font-bold text-lg">R</span>
           </div>
           <div>
             <p className="font-semibold text-sm text-gray-900">Resurge</p>
-            <p className="text-xs text-gray-500">Business Portal</p>
+            <p className="text-xs text-gray-500">
+              {isCreator ? "Creator Portal" : "Business Portal"}
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Mode Toggle â Admin Only */}
+      {/* Mode Toggle - Admin Only (creators never see this) */}
       {isAdmin && (
         <div className="px-3 pt-3 pb-1">
           <div className="flex rounded-lg bg-gray-100 p-0.5">
@@ -172,14 +200,16 @@ export default function HomeSidebar({ profile }: HomeSidebarProps) {
           {links.map((link) => {
             const Icon = link.icon;
             const isActive =
-              pathname === link.href || pathname.startsWith(link.href + "/");
+              pathname === link.href ||
+              pathname.startsWith(link.href + "/");
+
             return (
               <Link
                 key={link.href}
                 href={link.href}
                 className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   isActive
-                    ? "bg-brand-50 text-brand-700"
+                    ? `${accentActiveBg} ${accentActiveText}`
                     : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                 }`}
               >
@@ -193,9 +223,9 @@ export default function HomeSidebar({ profile }: HomeSidebarProps) {
 
       {/* User section */}
       <div className="border-t border-gray-200 p-4">
-        <NotificationBell />
-        <div className="mt-3">
-          <p className="text-sm font-medium text-brand-700">
+        {!isCreator && <NotificationBell />}
+        <div className={isCreator ? "" : "mt-3"}>
+          <p className={`text-sm font-medium ${accentText}`}>
             {profile.full_name}
           </p>
           <p className="text-xs text-gray-500 capitalize">
@@ -211,6 +241,5 @@ export default function HomeSidebar({ profile }: HomeSidebarProps) {
         </button>
       </div>
     </div>
-  
-)
+  )
 }
