@@ -1,277 +1,457 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Plus, Trash2, ExternalLink, X } from 'lucide-react';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { ExternalLink, Download, Check, X } from 'lucide-react';
+
+type AssignmentStatus =
+  | 'pending'
+  | 'in_creation'
+  | 'submitted'
+  | 'approved_for_editing'
+  | 'in_editing'
+  | 'pending_review'
+  | 'ready_for_posting'
+  | 'posted';
 
 interface Reel {
   id: string;
-  source_url: string;
   title: string;
-  creator_handle: string;
-  status: string;
-  assigned_to: string | null;
-  assigned_at: string | null;
-  created_at: string;
-  ofm_creators?: { id: string; name: string } | null;
+  description: string;
+  example_url: string;
 }
 
-interface Model {
+interface Creator {
   id: string;
   name: string;
   email: string;
 }
 
-function truncateUrl(url: string, maxLen = 45) {
-  if (url.length <= maxLen) return url;
-  return url.substring(0, maxLen) + '...';
+interface Assignment {
+  id: string;
+  reel_id: string;
+  model_id: string;
+  status: AssignmentStatus;
+  assigned_at: string;
+  submission_url: string | null;
+  submission_notes: string | null;
+  edited_url: string | null;
+  editor_id: string | null;
+  review_notes: string | null;
+  posted_at: string | null;
+  ofm_reels: Reel;
+  ofm_creators: Creator;
 }
 
-function formatDate(dateStr: string) {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+interface TrendsGridProps {
+  initialAssignments: Assignment[];
 }
 
-function getStatusBadge(status: string) {
-  switch (status) {
-    case 'pending':
-      return <span className="px-2 py-0.5 text-xs rounded-full bg-yellow-500/20 text-yellow-400">Pending</span>;
-    case 'in_creation':
-      return <span className="px-2 py-0.5 text-xs rounded-full bg-blue-500/20 text-blue-400">In Creation</span>;
-    case 'finished':
-      return <span className="px-2 py-0.5 text-xs rounded-full bg-green-500/20 text-green-400">Finished</span>;
-    case 'assigned':
-      return <span className="px-2 py-0.5 text-xs rounded-full bg-purple-500/20 text-purple-400">Assigned</span>;
-    default:
-      return <span className="px-2 py-0.5 text-xs rounded-full bg-gray-500/20 text-gray-400">{status}</span>;
-  }
+function getStatusBadge(status: AssignmentStatus): { bg: string; label: string } {
+  const badges: Record<AssignmentStatus, { bg: string; label: string }> = {
+    pending: { bg: 'bg-gray-600', label: 'Pending' },
+    in_creation: { bg: 'bg-blue-600', label: 'In Creation' },
+    submitted: { bg: 'bg-purple-600', label: 'Submitted' },
+    approved_for_editing: { bg: 'bg-indigo-600', label: 'Approved for Editing' },
+    in_editing: { bg: 'bg-orange-600', label: 'In Editing' },
+    pending_review: { bg: 'bg-pink-600', label: 'Pending Review' },
+    ready_for_posting: { bg: 'bg-green-600', label: 'Ready for Posting' },
+    posted: { bg: 'bg-teal-600', label: 'Posted' },
+  };
+  return badges[status] || { bg: 'bg-gray-500', label: status };
 }
 
-export default function TrendsGrid() {
-  const [reels, setReels] = useState<Reel[]>([]);
-  const [models, setModels] = useState<Model[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [reelUrl, setReelUrl] = useState('');
-  const [selectedModel, setSelectedModel] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+function AssignmentDetailModal({
+  assignment,
+  onClose,
+  onApprove,
+  onRequestChanges,
+}: {
+  assignment: Assignment;
+  onClose: () => void;
+  onApprove: (assignmentId: string) => void;
+  onRequestChanges: (assignmentId: string, notes: string) => void;
+}) {
+  const [reviewNotes, setReviewNotes] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const fetchReels = async () => {
-    try {
-      const res = await fetch('/api/reels');
-      const data = await res.json();
-      if (data.reels) setReels(data.reels);
-    } catch (err) {
-      console.error('Failed to fetch reels:', err);
-    } finally {
-      setLoading(false);
-    }
+  const canApprove =
+    assignment.status === 'submitted' ||
+    assignment.status === 'pending_review';
+
+  const canRequestChanges =
+    assignment.status === 'submitted' ||
+    assignment.status === 'pending_review';
+
+  const handleApprove = () => {
+    setIsSubmitting(true);
+    onApprove(assignment.id);
+    setTimeout(() => setIsSubmitting(false), 500);
   };
 
-  const fetchModels = async () => {
-    try {
-      const res = await fetch('/api/models');
-      const data = await res.json();
-      if (data.models) setModels(data.models);
-    } catch (err) {
-      console.error('Failed to fetch models:', err);
+  const handleRequestChanges = () => {
+    if (!reviewNotes.trim()) {
+      alert('Please enter feedback');
+      return;
     }
+    setIsSubmitting(true);
+    onRequestChanges(assignment.id, reviewNotes);
+    setTimeout(() => setIsSubmitting(false), 500);
   };
-
-  useEffect(() => {
-    fetchReels();
-    fetchModels();
-  }, []);
-
-  const handleAddReel = async () => {
-    if (!reelUrl.trim()) return;
-    setSubmitting(true);
-
-    try {
-      const res = await fetch('/api/reels', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          source_url: reelUrl.trim(),
-          assigned_to: selectedModel || undefined,
-        }),
-      });
-
-      if (res.ok) {
-        setReelUrl('');
-        setSelectedModel('');
-        setShowAddModal(false);
-        fetchReels();
-      }
-    } catch (err) {
-      console.error('Failed to add reel:', err);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    try {
-      const res = await fetch(`/api/reels?id=${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        setReels((prev) => prev.filter((r) => r.id !== id));
-      }
-    } catch (err) {
-      console.error('Failed to delete reel:', err);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
 
   return (
-    <div className="p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-white">Trends</h1>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+      <div className="bg-[#1a1a2e] border border-gray-700 rounded-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto p-6">
+        {/* Close button */}
         <button
-          onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-400 hover:text-white"
         >
-          <Plus className="w-4 h-4" />
-          Add Reel
+          <X className="w-5 h-5" />
         </button>
-      </div>
 
-      {/* Reels Table */}
-      <div className="bg-[#1a1a2e] rounded-xl border border-white/10 overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-white/10">
-              <th className="text-left px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Reel URL</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Assigned To</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Date Added</th>
-              <th className="text-right px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {reels.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-4 py-12 text-center text-gray-500">
-                  No reels added yet. Click &quot;+ Add Reel&quot; to get started.
-                </td>
-              </tr>
-            ) : (
-              reels.map((reel) => (
-                <tr key={reel.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                  <td className="px-4 py-3">
-                    <a
-                      href={reel.source_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1"
-                    >
-                      {truncateUrl(reel.source_url)}
-                      <ExternalLink className="w-3 h-3 flex-shrink-0" />
-                    </a>
-                  </td>
-                  <td className="px-4 py-3">
-                    {reel.ofm_creators?.name ? (
-                      <span className="text-sm text-white">{reel.ofm_creators.name}</span>
-                    ) : (
-                      <span className="text-sm text-gray-500">Unassigned</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    {getStatusBadge(reel.status)}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-400">
-                    {formatDate(reel.created_at)}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <button
-                      onClick={() => handleDelete(reel.id)}
-                      className="text-gray-500 hover:text-red-400 transition-colors p-1"
-                      title="Delete reel"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+        <h2 className="text-2xl font-bold text-white mb-6">
+          {assignment.ofm_reels.title}
+        </h2>
 
-      {/* Add Reel Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-[#1a1a2e] rounded-xl border border-white/10 p-6 w-full max-w-md shadow-2xl">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-white">Add Reel</h2>
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              {/* Reel Link */}
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Reel Link</label>
-                <input
-                  type="url"
-                  value={reelUrl}
-                  onChange={(e) => setReelUrl(e.target.value)}
-                  placeholder="Paste Instagram Reel URL..."
-                  className="w-full px-3 py-2 bg-[#0f0f1a] border border-white/10 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-              {/* Assign Model */}
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Assign Model</label>
-                <select
-                  value={selectedModel}
-                  onChange={(e) => setSelectedModel(e.target.value)}
-                  className="w-full px-3 py-2 bg-[#0f0f1a] border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">— Select a model (optional) —</option>
-                  {models.length === 0 ? (
-                    <option disabled>No models available — add one in Creators</option>
-                  ) : (
-                    models.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.name}
-                      </option>
-                    ))
-                  )}
-                </select>
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-3 pt-2">
-                <button
-                  onClick={() => setShowAddModal(false)}
-                  className="flex-1 px-4 py-2 border border-white/10 text-gray-300 rounded-lg text-sm font-medium hover:bg-white/5 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleAddReel}
-                  disabled={!reelUrl.trim() || submitting}
-                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors"
-                >
-                  {submitting ? 'Adding...' : 'Add Reel'}
-                </button>
-              </div>
-            </div>
-          </div>
+        {/* Creator Info */}
+        <div className="mb-6 p-4 bg-black/30 rounded-lg border border-gray-700">
+          <p className="text-sm text-gray-400">
+            <strong>Creator:</strong> {assignment.ofm_creators.name} (
+            {assignment.ofm_creators.email})
+          </p>
+          <p className="text-sm text-gray-400 mt-2">
+            <strong>Status:</strong>{' '}
+            <span className={`${getStatusBadge(assignment.status).bg} text-white text-xs px-2 py-1 rounded`}>
+              {getStatusBadge(assignment.status).label}
+            </span>
+          </p>
         </div>
-      )}
+
+        {/* Example Reel Link */}
+        {assignment.ofm_reels.example_url && (
+          <div className="mb-6">
+            <h3 className="text-sm font-semibold text-gray-300 mb-2">
+              Example Reel
+            </h3>
+            <a
+              href={assignment.ofm_reels.example_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-purple-400 hover:text-purple-300 text-sm"
+            >
+              <ExternalLink className="w-4 h-4" />
+              View Example
+            </a>
+          </div>
+        )}
+
+        {/* Submission Video */}
+        {assignment.submission_url && (
+          <div className="mb-6">
+            <h3 className="text-sm font-semibold text-gray-300 mb-2">
+              Submission Video
+            </h3>
+            <a
+              href={assignment.submission_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-blue-400 hover:text-blue-300 text-sm"
+            >
+              <Download className="w-4 h-4" />
+              Download Submission
+            </a>
+            {assignment.submission_notes && (
+              <p className="text-sm text-gray-400 mt-2 p-2 bg-black/30 rounded">
+                <strong>Notes:</strong> {assignment.submission_notes}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Edited Video */}
+        {assignment.edited_url && (
+          <div className="mb-6">
+            <h3 className="text-sm font-semibold text-gray-300 mb-2">
+              Edited Video
+            </h3>
+            <a
+              href={assignment.edited_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-green-400 hover:text-green-300 text-sm"
+            >
+              <Download className="w-4 h-4" />
+              Download Edited Version
+            </a>
+          </div>
+        )}
+
+        {/* Review Notes */}
+        {(canApprove || canRequestChanges) && (
+          <div className="mb-6">
+            <label className="block text-sm font-semibold text-gray-300 mb-2">
+              Review Notes
+            </label>
+            <textarea
+              value={reviewNotes}
+              onChange={(e) => setReviewNotes(e.target.value)}
+              placeholder="Add feedback or approval notes..."
+              className="w-full bg-[#0f0f1a] border border-gray-700 text-white px-3 py-2 rounded-lg text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500"
+              rows={4}
+            />
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        {(canApprove || canRequestChanges) && (
+          <div className="flex gap-3 justify-end">
+            {canRequestChanges && (
+              <button
+                onClick={handleRequestChanges}
+                disabled={isSubmitting || !reviewNotes.trim()}
+                className="flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-500 disabled:bg-orange-600/50 text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                Request Changes
+              </button>
+            )}
+            {canApprove && (
+              <button
+                onClick={handleApprove}
+                disabled={isSubmitting}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 disabled:bg-green-600/50 text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                <Check className="w-4 h-4" />
+                Approve
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Existing Review Notes */}
+        {assignment.review_notes && (
+          <div className="mt-6 p-4 bg-black/30 border border-gray-700 rounded-lg">
+            <p className="text-sm text-gray-400">
+              <strong>Previous Review Notes:</strong>
+            </p>
+            <p className="text-sm text-gray-300 mt-2">{assignment.review_notes}</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
+
+export default function TrendsGrid({
+  initialAssignments,
+}: TrendsGridProps) {
+  const [assignments, setAssignments] = useState<Assignment[]>(
+    initialAssignments
+  );
+  const [selectedAssignment, setSelectedAssignment] =
+    useState<Assignment | null>(null);
+  const [statusFilter, setStatusFilter] = useState<AssignmentStatus | 'all'>(
+    'all'
+  );
+  const [isLoading, setIsLoading] = useState(false);
+
+  const filteredAssignments = useMemo(() => {
+    if (statusFilter === 'all') return assignments;
+    return assignments.filter((a) => a.status === statusFilter);
+  }, [assignments, statusFilter]);
+
+  const handleApprove = async (assignmentId: string) => {
+    setIsLoading(true);
+    try {
+      const currentAssignment = assignments.find(
+        (a) => a.id === assignmentId
+      );
+      const newStatus =
+        currentAssignment?.status === 'submitted'
+          ? 'approved_for_editing'
+          : 'ready_for_posting';
+
+      const response = await fetch('/api/content-assignments', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          assignment_id: assignmentId,
+          new_status: newStatus,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Approval failed');
+
+      const data = await response.json();
+      setAssignments((prev) =>
+        prev.map((a) =>
+          a.id === assignmentId
+            ? { ...a, ...data.assignment }
+            : a
+        )
+      );
+      setSelectedAssignment(null);
+    } catch (error) {
+      console.error('Approval error:', error);
+      alert('Failed to approve');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRequestChanges = async (
+    assignmentId: string,
+    notes: string
+  ) => {
+    setIsLoading(true);
+    try {
+      const currentAssignment = assignments.find(
+        (a) => a.id === assignmentId
+      );
+      const newStatus =
+        currentAssignment?.status === 'submitted'
+          ? 'in_creation'
+          : 'in_editing';
+
+      const response = await fetch('/api/content-assignments', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          assignment_id: assignmentId,
+          new_status: newStatus,
+          review_notes: notes,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Request failed');
+
+      const data = await response.json();
+      setAssignments((prev) =>
+        prev.map((a) =>
+          a.id === assignmentId
+            ? { ...a, ...data.assignment }
+            : a
+        )
+      );
+      setSelectedAssignment(null);
+    } catch (error) {
+      console.error('Request changes error:', error);
+      alert('Failed to request changes');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="h-full overflow-y-auto bg-[#0f0f1a]">
+      <div className="p-6 max-w-6xl mx-auto">
+        <h1 className="text-3xl font-bold text-white mb-2">Content Pipeline</h1>
+        <p className="text-gray-400 mb-6">Track and manage all content assignments</p>
+
+        {/* Status Filter */}
+        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+          <button
+            onClick={() => setStatusFilter('all')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+              statusFilter === 'all'
+                ? 'bg-purple-600 text-white'
+                : 'bg-[#1a1a2e] border border-gray-700 text-gray-300 hover:text-white'
+            }`}
+          >
+            All
+          </button>
+          {(
+            [
+              'pending',
+              'in_creation',
+              'submitted',
+              'approved_for_editing',
+              'in_editing',
+              'pending_review',
+              'ready_for_posting',
+              'posted',
+            ] as AssignmentStatus[]
+          ).map((status) => (
+            <button
+              key={status}
+              onClick={() => setStatusFilter(status)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                statusFilter === status
+                  ? `${getStatusBadge(status).bg} text-white`
+                  : 'bg-[#1a1a2e] border border-gray-700 text-gray-300 hover:text-white'
+              }`}
+            >
+              {getStatusBadge(status).label}
+            </button>
+          ))}
+        </div>
+
+        {/* Assignments Table */}
+        {filteredAssignments.length === 0 ? (
+          <div className="bg-[#1a1a2e] border border-gray-700 rounded-lg p-12 text-center">
+            <p className="text-gray-400">No assignments with selected filter</p>
+          </div>
+        ) : (
+          <div className="bg-[#1a1a2e] border border-gray-700 rounded-lg overflow-hidden">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-700 bg-black/30">
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">
+                    Reel
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">
+                    Creator
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">
+                    Assigned
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredAssignments.map((assignment) => (
+                  <tr
+                    key={assignment.id}
+                    onClick={() => setSelectedAssignment(assignment)}
+                    className="border-b border-gray-700 hover:bg-black/20 cursor-pointer transition-colors"
+                  >
+                    <td className="px-6 py-4 text-sm text-white font-medium">
+                      {assignment.ofm_reels.title}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-400">
+                      {assignment.ofm_creators.name}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span
+                        className={`${getStatusBadge(assignment.status).bg
+                          } text-white text-xs px-2 py-1 rounded-full inline-block`}
+                      >
+                        {getStatusBadge(assignment.status).label}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-400">
+                      {new Date(assignment.assigned_at).toLocaleDateString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Detail Modal */}
+      {selectedAssignment && (
+        <AssignmentDetailModal
+          assignment={selectedAssignment}
+          onClose={() => setSelectedAssignment(null)}
+          onApprove={handleApprove}
+          onRequestChanges={handleRequestChanges}
+        />
+      )}
+    </div>
+        
+( 
+( 
+(
