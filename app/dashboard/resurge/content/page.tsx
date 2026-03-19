@@ -133,22 +133,23 @@ export default function ContentCreationPage() {
     setUploadError(null);
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('assignment_id', assignmentId);
-      formData.append('upload_type', uploadType);
+      // Upload directly to Supabase Storage from the browser
+      // This bypasses Vercel's 4.5MB serverless body size limit
+      const fileName = uploadType === 'submission' ? 'submission.mp4' : 'edited.mp4';
+      const filePath = `${assignmentId}/${fileName}`;
 
-      const uploadResponse = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
+      const { error: uploadError, data } = await supabase.storage
+        .from('content-submissions')
+        .upload(filePath, file, { upsert: true });
 
-      if (!uploadResponse.ok) {
-        throw new Error('Upload failed');
+      if (uploadError) {
+        throw new Error(uploadError.message || 'Upload failed');
       }
 
-      const uploadData = await uploadResponse.json();
-      const videoUrl = uploadData.url;
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('content-submissions')
+        .getPublicUrl(filePath);
 
       // Update assignment with submission_url and status
       const updateResponse = await fetch('/api/content-assignments', {
@@ -157,8 +158,8 @@ export default function ContentCreationPage() {
         body: JSON.stringify({
           assignment_id: assignmentId,
           new_status: uploadType === 'submission' ? 'submitted' : undefined,
-          submission_url: uploadType === 'submission' ? videoUrl : undefined,
-          edited_url: uploadType === 'edited' ? videoUrl : undefined,
+          submission_url: uploadType === 'submission' ? publicUrl : undefined,
+          edited_url: uploadType === 'edited' ? publicUrl : undefined,
         }),
       });
 
@@ -443,7 +444,7 @@ export default function ContentCreationPage() {
                   <div className="flex justify-between items-start mb-4">
                     <div>
                       <h3 className="text-lg font-semibold text-white">
-                       {assignment.ofm_reels.title}
+                        {assignment.ofm_reels.title}
                       </h3>
                     </div>
                     <span className="bg-green-600 text-white text-xs font-medium px-3 py-1 rounded-full">
