@@ -1,1 +1,1 @@
-Content Pipeline v1.0 - deployed 2026-03-19T19:47:13.737Z
+Content Pipeline v2.0 - full pipeline deployed 2026-03-19T20:47:17.991Z
