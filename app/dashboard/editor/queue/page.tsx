@@ -17,7 +17,7 @@ interface Assignment {
     id: string;
     title: string;
     description: string;
-    example_url: string;
+    source_url: string;
   };
   ofm_creators: {
     id: string;
@@ -78,30 +78,7 @@ export default function EditorQueuePage() {
     try {
       const response = await fetch('/api/content-assignments', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          assignment_id: assignmentId,
-          new_status: 'in_editing',
-          editor_id: editor?.id,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to start editing');
-      }
-
-      const updatedAssignment = await response.json();
-
-      setAssignments((prev) =>
-        prev.map((a) =>
-          a.id === assignmentId
-            ? { ...a, ...updatedAssignment.assignment }
-            : a
-        )
-      );
-    } catch (error) {
-      console.error('Error starting editing:', error);
-      alert('Failed to start editing');
+        headers: { 'Content-Type': 'application/json' },(€€€€€€€‰½‘äè)M=8¹ÍÑÉ¥¹¥™ä¡ì(€€€€€€€€€…ÍÍ¥¹µ•¹Ñ}¥è…ÍÍ¥¹µ•¹Ñ%°(€€€€€€€€€¹•İ}ÍÑ…ÑÕÌè€¥¹}•‘¥Ñ¥¹œœ°(€€€€€€€€€•‘¥Ñ½É}¥è•‘¥Ñ½Èü¹¥°(€€€€€€€ô¤°(€€€€€ô¤ì((€€€€€¥˜€ …É•ÍÁ½¹Í”¹½¬¤ì(€€€€€€€Ñ¡É½Ü¹•ÜÉÉ½È …¥±•Ñ¼ÍÑ…ÉĞ•‘¥Ñ¥¹œœ¤ì(€€€€€ô((€€€€€½¹ÍĞÕÁ‘…Ñ•‘ÍÍ¥¹µ•¹Ğ€ô…İ…¥ĞÉ•ÍÁ½¹Í”¹©Í½¸ ¤ì((€€€€€Í•ÑÍÍ¥¹µ•¹ÑÌ ¡ÁÉ•Ø¤€ôø(€€€€€€€ÁÉ•Ø¹µ…À ¡„¤€ôø(€€€€€€€€€„¹¥€ôôô…ÍÍ¥¹µ•¹Ñ%(€€€€€€€€€€€€üì€¸¸¹„°€¸¸¹ÕÁ‘…Ñ•‘ÍÍ¥¹µ•¹Ğ¹…ÍÍ¥¹µ•¹Ğô(€€€€€€€€€€€€è„(€€€€€€€€¤(€€€€€€¤ì(€€€ô…Ñ €¡•ÉÉ½È¤ì(€€€€€½¹Í½±”¹•ÉÉ½È ÉÉ½ÈÍÑ…ÉÑ¥¹œ•‘¥Ñ¥¹œèœ°•ÉÉ½È¤ì(€€€€€…±•ÉĞ …¥±•Ñ¼ start editing');
     } finally {
       setEditingAssignmentId(null);
     }
@@ -224,9 +201,9 @@ export default function EditorQueuePage() {
 
                     {/* Links */}
                     <div className="space-y-2">
-                      {assignment.ofm_reels.example_url && (
+                      {assignment.ofm_reels.source_url && (
                         <a
-                          href={assignment.ofm_reels.example_url}
+                          href={assignment.ofm_reels.source_url}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center gap-2 text-purple-400 hover:text-purple-300 text-sm font-medium"
@@ -267,7 +244,7 @@ export default function EditorQueuePage() {
                         <button
                           onClick={() => handleStartEditing(assignment.id)}
                           disabled={editingAssignmentId === assignment.id}
-                          className="px-6 py-3 bg-purple-600 hover:bg-purple-500 disabled:bg-purple-600/50 text-white rounded-lg font-medium transition-colors"
+                          className="px-6 py-3 bg-purple-600 hover:bg-purple-50 disabled:bg-purple-600/50 text-white rounded-lg font-medium transition-colors"
                         >
                           {editingAssignmentId === assignment.id
                             ? 'Starting...'
@@ -307,7 +284,7 @@ export default function EditorQueuePage() {
                         </div>
 
                         {assignment.edited_url && (
-                          <div className="mt-4 p-3 bg-green-500/10 border border-green-500/30 rounded">
+                          <div className="mt-4 p-3 bg-green-500/p10 border border-green-500/30 rounded">
                             <p className="flex items-center gap-2 text-green-400 text-sm font-medium">
                               <CheckCircle className="w-4 h-4" />
                               Edited video submitted for review
