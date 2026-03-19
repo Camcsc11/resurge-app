@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { Upload, Download, CheckCircle, Clock, AlertCircle, Play } from 'lucide-react';
+import { Upload, Download, CheckCircle, Clock, AlertCircle, Play, ExternalLink } from 'lucide-react';
 
 type AssignmentStatus =
   | 'pending'
@@ -277,6 +277,7 @@ export default function ContentCreationPage() {
                       {getStatusLabel(assignment.status)}
                     </span>
                   </div>
+                  {/* Example Reel Link */}
                   {assignment.ofm_reels.source_url && (
                     <a
                       href={assignment.ofm_reels.source_url}
@@ -288,27 +289,82 @@ export default function ContentCreationPage() {
                       View Example Reel
                     </a>
                   )}
-                  {assignment.status === 'in_creation' && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Upload Your Video
-                      </label>
-                      <input
-                        type="file"
-                        accept="video/mp4"
-                        onChange={(e) => {
-                          const file = e.currentTarget.files?.[0];
-                          if (file) {
-                            handleVideoUpload(assignment.id, file, 'submission');
+
+                  {/* Pending: Show Start Creating button */}
+                  {assignment.status === 'pending' && (
+                    <button
+                      onClick={async () => {
+                        try {
+                          const res = await fetch('/api/content-assignments', {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              assignment_id: assignment.id,
+                              new_status: 'in_creation',
+                            }),
+                          });
+                          if (res.ok) {
+                            const data = await res.json();
+                            setAssignments((prev) =>
+                              prev.map((a) =>
+                                a.id === assignment.id
+                                  ? { ...a, ...data.assignment }
+                                  : a
+                              )
+                            );
                           }
-                        }}
-                        disabled={uploadingAssignmentId === assignment.id}
-                        className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-purple-600 file:text-white hover:file:bg-purple-500"
-                      />
+                        } catch (err) {
+                          console.error('Failed to start creating:', err);
+                        }
+                      }}
+                      className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors"
+                    >
+                      <Play className="w-4 h-4" />
+                      Start Creating
+                    </button>
+                  )}
+
+                  {/* In Creation: Show upload section with example reel side by side */}
+                  {assignment.status === 'in_creation' && (
+                    <div className="mt-4 p-4 bg-black/20 border border-purple-500/30 rounded-lg">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        {/* Example Reel */}
+                        <div className="p-3 bg-black/30 rounded-lg border border-gray-700">
+                          <h4 className="text-sm font-medium text-gray-300 mb-2">Example Reel</h4>
+                          {assignment.ofm_reels.source_url && (
+                            <a
+                              href={assignment.ofm_reels.source_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-2 text-purple-400 hover:text-purple-300 text-sm"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                              {assignment.ofm_reels.source_url.substring(0, 40)}...
+                            </a>
+                          )}
+                        </div>
+                        {/* Upload Area */}
+                        <div className="p-3 bg-black/30 rounded-lg border border-gray-700">
+                          <h4 className="text-sm font-medium text-gray-300 mb-2">Your Video</h4>
+                          <input
+                            type="file"
+                            accept="video/mp4"
+                            onChange={(e) => {
+                              const file = e.currentTarget.files?.[0];
+                              if (file) {
+                                handleVideoUpload(assignment.id, file, 'submission');
+                              }
+                            }}
+                            disabled={uploadingAssignmentId === assignment.id}
+                            className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-purple-600 file:text-white hover:file:bg-purple-500"
+                          />
+                        </div>
+                      </div>
                       {uploadingAssignmentId === assignment.id && (
-                        <p className="text-sm text-purple-400 mt-2">
-                          Uploading...
-                        </p>
+                        <p className="text-sm text-purple-400">Uploading and submitting for editing...</p>
+                      )}
+                      {uploadError && (
+                        <p className="text-sm text-red-400 mt-1">{uploadError}</p>
                       )}
                     </div>
                   )}
@@ -387,7 +443,7 @@ export default function ContentCreationPage() {
                   <div className="flex justify-between items-start mb-4">
                     <div>
                       <h3 className="text-lg font-semibold text-white">
-                        {assignment.ofm_reels.title}
+                       {assignment.ofm_reels.title}
                       </h3>
                     </div>
                     <span className="bg-green-600 text-white text-xs font-medium px-3 py-1 rounded-full">
