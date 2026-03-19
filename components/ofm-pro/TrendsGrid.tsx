@@ -17,7 +17,7 @@ interface Reel {
   id: string;
   title: string;
   description: string;
-  example_url: string;
+  source_url: string;
 }
 
 interface Creator {
@@ -128,13 +128,13 @@ function AssignmentDetailModal({
         </div>
 
         {/* Example Reel Link */}
-        {assignment.ofm_reels.example_url && (
+        {assignment.ofm_reels.source_url && (
           <div className="mb-6">
             <h3 className="text-sm font-semibold text-gray-300 mb-2">
               Example Reel
             </h3>
             <a
-              href={assignment.ofm_reels.example_url}
+              href={assignment.ofm_reels.source_url}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 text-purple-400 hover:text-purple-300 text-sm"
@@ -213,17 +213,17 @@ function AssignmentDetailModal({
               >
                 Request Changes
               </button>
-            )}
+            ))}
             {canApprove && (
               <button
                 onClick={handleApprove}
                 disabled={isSubmitting}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 disabled:bg-green-600/50 text-white rounded-lg text-sm font-medium transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-50 disabled:bg-green-600/50 text-white rounded-lg text-sm font-medium transition-colors"
               >
                 <Check className="w-4 h-4" />
                 Approve
               </button>
-            )}
+            ))}
           </div>
         )}
 
@@ -238,8 +238,7 @@ function AssignmentDetailModal({
         )}
       </div>
     </div>
-  );
-}
+  +}
 
 export default function TrendsGrid({
   initialAssignments,
@@ -449,9 +448,7 @@ export default function TrendsGrid({
           onApprove={handleApprove}
           onRequestChanges={handleRequestChanges}
         />
-      )}
+      ))}
     </div>
-        
-( 
-( 
-(
+  );
+}
