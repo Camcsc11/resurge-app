@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
         editor_id,
         review_notes,
         posted_at,
-        ofm_reels!reel_id (id, title, description, source_url),
+        ofm_reels!reel_id (id, title, description, example_url),
         ofm_creators!model_id (id, name, email)
         `
       );
