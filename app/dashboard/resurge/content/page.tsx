@@ -29,7 +29,7 @@ interface Assignment {
     id: string;
     title: string;
     description: string;
-    example_url: string;
+    source_url: string;
   };
 }
 
@@ -277,9 +277,9 @@ export default function ContentCreationPage() {
                       {getStatusLabel(assignment.status)}
                     </span>
                   </div>
-                  {assignment.ofm_reels.example_url && (
+                  {assignment.ofm_reels.source_url && (
                     <a
-                      href={assignment.ofm_reels.example_url}
+                      href={assignment.ofm_reels.source_url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 text-purple-400 hover:text-purple-300 text-sm mb-4"
@@ -292,7 +292,7 @@ export default function ContentCreationPage() {
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">
                         Upload Your Video
-                      </label>
+                     </label>
                       <input
                         type="file"
                         accept="video/mp4"
@@ -309,7 +309,7 @@ export default function ContentCreationPage() {
                         <p className="text-sm text-purple-400 mt-2">
                           Uploading...
                         </p>
-                      )}
+                      ))}
                     </div>
                   )}
                 </div>
@@ -399,7 +399,7 @@ export default function ContentCreationPage() {
                       <a
                         href={assignment.edited_url}
                         download
-                        className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                        className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-50 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                       >
                         <Download className="w-4 h-4" />
                         Download Video
@@ -440,7 +440,7 @@ export default function ContentCreationPage() {
                       </h3>
                       {assignment.posted_at && (
                         <p className="text-sm text-gray-400 mt-1">
-                          Posted on{' '}
+                          Posted on,{/ '}
                           {new Date(assignment.posted_at).toLocaleDateString()}
                         </p>
                       )}
