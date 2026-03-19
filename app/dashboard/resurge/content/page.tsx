@@ -157,7 +157,7 @@ export default function ContentCreationPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           assignment_id: assignmentId,
-          new_status: uploadType === 'submission' ? 'submitted' : undefined,
+          new_status: uploadType === 'submission' ? 'submitted' : 'pending_review',
           submission_url: uploadType === 'submission' ? publicUrl : undefined,
           edited_url: uploadType === 'edited' ? publicUrl : undefined,
         }),
@@ -199,6 +199,12 @@ export default function ContentCreationPage() {
     (a) =>
       a.status === 'submitted' ||
       a.status === 'approved_for_editing'
+  );
+  const inEditingAssignments = assignments.filter(
+    (a) => a.status === 'in_editing'
+  );
+  const pendingReviewAssignments = assignments.filter(
+    (a) => a.status === 'pending_review'
   );
   const readyForPosting = assignments.filter(
     (a) => a.status === 'ready_for_posting'
@@ -415,6 +421,115 @@ export default function ContentCreationPage() {
                   )}
                   {assignment.review_notes && (
                     <div className="bg-black/30 border-l-2 border-orange-500 p-3 rounded text-sm text-gray-300">
+                      <strong>Review Feedback:</strong>{' '}
+                      {assignment.review_notes}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* In Editing - Editor uploads finished product */}
+        <section className="mb-12">
+          <h2 className="text-2xl font-bold text-white mb-4">
+            In Editing
+          </h2>
+          {inEditingAssignments.length === 0 ? (
+            <div className="bg-[#1a1a2e] border border-gray-700 rounded-lg p-8 text-center text-gray-400">
+              No videos currently being edited
+            </div>
+          ) : (
+            <div className="grid gap-4">
+              {inEditingAssignments.map((assignment) => (
+                <div
+                  key={assignment.id}
+                  className="bg-[#1a1a2e] border border-gray-700 rounded-lg p-6"
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="text-lg font-semibold text-white">
+                        {assignment.ofm_reels.title}
+                      </h3>
+                      <p className="text-sm text-gray-400 mt-1">
+                        {assignment.ofm_reels.description}
+                      </p>
+                    </div>
+                    <span className="bg-orange-600 text-white text-xs font-medium px-3 py-1 rounded-full">
+                      In Editing
+                    </span>
+                  </div>
+                  {/* Editor Upload Area */}
+                  <div className="mt-4 p-4 bg-black/20 border border-orange-500/30 rounded-lg">
+                    <h4 className="text-sm font-medium text-gray-300 mb-3">Upload Edited Video</h4>
+                    <input
+                      type="file"
+                      accept="video/mp4,video/quicktime,video/webm"
+                      onChange={(e) => {
+                        const file = e.currentTarget.files?.[0];
+                        if (file) {
+                          handleVideoUpload(assignment.id, file, 'edited');
+                        }
+                      }}
+                      disabled={uploadingAssignmentId === assignment.id}
+                      className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-orange-600 file:text-white hover:file:bg-orange-500"
+                    />
+                    {uploadingAssignmentId === assignment.id && (
+                      <p className="text-sm text-orange-400 mt-2">Uploading edited video and submitting for review...</p>
+                    )}
+                    {uploadError && (
+                      <p className="text-sm text-red-400 mt-1">{uploadError}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* Pending Review - Admin reviews edited video */}
+        <section className="mb-12">
+          <h2 className="text-2xl font-bold text-white mb-4">
+            Pending Review
+          </h2>
+          {pendingReviewAssignments.length === 0 ? (
+            <div className="bg-[#1a1a2e] border border-gray-700 rounded-lg p-8 text-center text-gray-400">
+              No videos pending review
+            </div>
+          ) : (
+            <div className="grid gap-4">
+              {pendingReviewAssignments.map((assignment) => (
+                <div
+                  key={assignment.id}
+                  className="bg-[#1a1a2e] border border-gray-700 rounded-lg p-6"
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="text-lg font-semibold text-white">
+                        {assignment.ofm_reels.title}
+                      </h3>
+                      <p className="text-sm text-gray-400 mt-1">
+                        Edited video submitted — waiting for admin approval
+                      </p>
+                    </div>
+                    <span className="bg-pink-600 text-white text-xs font-medium px-3 py-1 rounded-full">
+                      Pending Review
+                    </span>
+                  </div>
+                  {assignment.edited_url && (
+                    <a
+                      href={assignment.edited_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-purple-400 hover:text-purple-300 text-sm"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      View Edited Video
+                    </a>
+                  )}
+                  {assignment.review_notes && (
+                    <div className="bg-black/30 border-l-2 border-orange-500 p-3 rounded text-sm text-gray-300 mt-3">
                       <strong>Review Feedback:</strong>{' '}
                       {assignment.review_notes}
                     </div>
