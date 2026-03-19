@@ -42,10 +42,6 @@ interface Assignment {
   ofm_creators: Creator;
 }
 
-interface TrendsGridProps {
-  initialAssignments: Assignment[];
-}
-
 function getStatusBadge(status: AssignmentStatus): { bg: string; label: string } {
   const badges: Record<AssignmentStatus, { bg: string; label: string }> = {
     pending: { bg: 'bg-gray-600', label: 'Pending' },
@@ -213,17 +209,17 @@ function AssignmentDetailModal({
               >
                 Request Changes
               </button>
-            ))}
+            )}
             {canApprove && (
               <button
                 onClick={handleApprove}
                 disabled={isSubmitting}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-50 disabled:bg-green-600/50 text-white rounded-lg text-sm font-medium transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 disabled:bg-green-600/50 text-white rounded-lg text-sm font-medium transition-colors"
               >
                 <Check className="w-4 h-4" />
                 Approve
               </button>
-            ))}
+            )}
           </div>
         )}
 
@@ -238,20 +234,32 @@ function AssignmentDetailModal({
         )}
       </div>
     </div>
-  +}
-
-export default function TrendsGrid({
-  initialAssignments,
-}: TrendsGridProps) {
-  const [assignments, setAssignments] = useState<Assignment[]>(
-    initialAssignments
   );
+}
+
+export default function TrendsGrid() {
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [selectedAssignment, setSelectedAssignment] =
     useState<Assignment | null>(null);
   const [statusFilter, setStatusFilter] = useState<AssignmentStatus | 'all'>(
     'all'
   );
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAssignments = async () => {
+      try {
+        const res = await fetch('/api/content-assignments');
+        const data = await res.json();
+        if (data.assignments) setAssignments(data.assignments);
+      } catch (err) {
+        console.error('Failed to fetch assignments:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchAssignments();
+  }, []);
 
   const filteredAssignments = useMemo(() => {
     if (statusFilter === 'all') return assignments;
@@ -448,7 +456,7 @@ export default function TrendsGrid({
           onApprove={handleApprove}
           onRequestChanges={handleRequestChanges}
         />
-      ))}
+      )}
     </div>
   );
 }
