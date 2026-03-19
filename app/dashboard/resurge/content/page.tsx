@@ -90,11 +90,11 @@ export default function ContentCreationPage() {
           return;
         }
 
-        // Find creator record
+        // Find creator record by user_id (set during invite)
         const { data: creatorData, error: creatorError } = await supabase
           .from('ofm_creators')
           .select('id, name, email')
-          .eq('email', user.email)
+          .eq('user_id', user.id)
           .single();
 
         if (creatorError) {
