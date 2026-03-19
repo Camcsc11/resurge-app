@@ -29,7 +29,7 @@ interface Assignment {
     id: string;
     title: string;
     description: string;
-    example_url: string;
+    source_url: string;
   };
 }
 
@@ -277,9 +277,9 @@ export default function ContentCreationPage() {
                       {getStatusLabel(assignment.status)}
                     </span>
                   </div>
-                  {assignment.ofm_reels.example_url && (
+                  {assignment.ofm_reels.source_url && (
                     <a
-                      href={assignment.ofm_reels.example_url}
+                      href={assignment.ofm_reels.source_url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 text-purple-400 hover:text-purple-300 text-sm mb-4"
