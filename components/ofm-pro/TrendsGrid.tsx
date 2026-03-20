@@ -477,7 +477,7 @@ export default function TrendsGrid() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         assignment_id: assignmentId,
-        new_status: 'pending_review',
+        new_status: 'ready_for_posting',
         edited_url: publicUrl,
       }),
     });
