@@ -34,7 +34,7 @@ const VALID_TRANSITIONS: Record<AssignmentStatus, AssignmentStatus[]> = {
   pending: ['in_creation'],
   in_creation: ['submitted', 'pending'],
   submitted: ['approved_for_editing', 'in_creation'],
-  approved_for_editing: ['in_editing', 'pending_review'],
+  approved_for_editing: ['in_editing', 'pending_review', 'ready_for_posting'],
   in_editing: ['pending_review'],
   pending_review: ['ready_for_posting', 'in_editing'],
   ready_for_posting: ['posted'],
