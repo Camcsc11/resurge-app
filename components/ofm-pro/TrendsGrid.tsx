@@ -523,7 +523,6 @@ export default function TrendsGrid() {
               'in_creation',
               'submitted',
               'approved_for_editing',
-              'in_editing',
               'pending_review',
               'ready_for_posting',
               'posted',
