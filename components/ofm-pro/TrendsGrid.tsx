@@ -366,6 +366,9 @@ export default function TrendsGrid() {
 
   const filteredAssignments = useMemo(() => {
     if (statusFilter === 'all') return assignments;
+    if (statusFilter === 'pending_review') {
+      return assignments.filter((a) => a.status === 'pending_review' || a.status === 'approved_for_editing' || a.status === 'in_editing');
+    }
     return assignments.filter((a) => a.status === statusFilter);
   }, [assignments, statusFilter]);
 
@@ -637,7 +640,7 @@ export default function TrendsGrid() {
                   onChange={(e) => setSelectedModel(e.target.value)}
                   className="w-full px-3 py-2 bg-[#0f0f1a] border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="">— Select a model (optional) —</option>
+                  <option value="">â Select a model (optional) â</option>
                   {models.map((m) => (
                     <option key={m.id} value={m.id}>{m.name}</option>
                   ))}
