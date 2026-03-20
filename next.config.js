@@ -6,13 +6,6 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  experimental: {
-    serverActions: {},
-  },
-  images: {
-    domains: ['lh3.googleusercontent.com'],
-  },
 };
 
 module.exports = nextConfig;
-
