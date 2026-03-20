@@ -187,6 +187,23 @@ function AssignmentDetailModal({
           </div>
         )}
 
+        {/* Start Editing - transition from approved_for_editing to in_editing */}
+        {assignment.status === 'approved_for_editing' && (
+          <div className="mb-6">
+            <button
+              onClick={() => {
+                setIsSubmitting(true);
+                onApprove(assignment.id);
+                setTimeout(() => setIsSubmitting(false), 500);
+              }}
+              disabled={isSubmitting}
+              className="inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-500 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors"
+            >
+              Start Editing
+            </button>
+          </div>
+        )}
+
         {/* Editor Upload - for in_editing assignments */}
         {assignment.status === 'in_editing' && (
           <div className="mb-6 p-4 bg-black/20 border border-orange-500/30 rounded-lg">
@@ -361,7 +378,9 @@ export default function TrendsGrid() {
       const newStatus =
         currentAssignment?.status === 'submitted'
           ? 'approved_for_editing'
-          : 'ready_for_posting';
+          : currentAssignment?.status === 'approved_for_editing'
+            ? 'in_editing'
+            : 'ready_for_posting';
 
       const response = await fetch('/api/content-assignments', {
         method: 'PATCH',
