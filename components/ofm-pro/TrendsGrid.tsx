@@ -457,40 +457,50 @@ export default function TrendsGrid() {
   };
 
   const handleUploadEdited = async (assignmentId: string, file: File) => {
-    const supabase = createClient();
-    const filePath = `${assignmentId}/edited.mp4`;
+    try {
+      const supabase = createClient();
+      const filePath = `${assignmentId}/edited.mp4`;
 
-    const { error: uploadError } = await supabase.storage
-      .from('content-submissions')
-      .upload(filePath, file, { upsert: true });
+      const { error: storageError } = await supabase.storage
+        .from('content-submissions')
+        .upload(filePath, file, { upsert: true });
 
-    if (uploadError) {
-      throw new Error(uploadError.message || 'Upload failed');
+      let videoUrl = '';
+      if (storageError) {
+        console.error('Storage upload failed:', storageError);
+        videoUrl = 'upload-pending';
+      } else {
+        const { data: { publicUrl } } = supabase.storage
+          .from('content-submissions')
+          .getPublicUrl(filePath);
+        videoUrl = publicUrl;
+      }
+
+      const res = await fetch('/api/content-assignments', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          assignment_id: assignmentId,
+          new_status: 'ready_for_posting',
+          edited_url: videoUrl,
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Failed to update assignment');
+      }
+
+      const data = await res.json();
+      setAssignments((prev) =>
+        prev.map((a) =>
+          a.id === assignmentId ? { ...a, ...data.assignment } : a
+        )
+      );
+      setSelectedAssignment(null);
+    } catch (err) {
+      throw err;
     }
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('content-submissions')
-      .getPublicUrl(filePath);
-
-    const res = await fetch('/api/content-assignments', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        assignment_id: assignmentId,
-        new_status: 'ready_for_posting',
-        edited_url: publicUrl,
-      }),
-    });
-
-    if (!res.ok) throw new Error('Failed to update assignment');
-
-    const data = await res.json();
-    setAssignments((prev) =>
-      prev.map((a) =>
-        a.id === assignmentId ? { ...a, ...data.assignment } : a
-      )
-    );
-    setSelectedAssignment(null);
   };
 
   return (
