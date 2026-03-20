@@ -567,6 +567,11 @@ export default function TrendsGrid() {
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">
                     Assigned
                   </th>
+                  {statusFilter === 'pending_review' && (
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">
+                      Upload Finished Reel
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -593,6 +598,25 @@ export default function TrendsGrid() {
                     <td className="px-6 py-4 text-sm text-gray-400">
                       {new Date(assignment.assigned_at).toLocaleDateString()}
                     </td>
+                    {statusFilter === 'pending_review' && (
+                      <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                        {(assignment.status === 'approved_for_editing' || assignment.status === 'in_editing') ? (
+                          <input
+                            type="file"
+                            accept="video/mp4,video/quicktime,video/webm"
+                            onChange={async (e) => {
+                              const file = e.currentTarget.files?.[0];
+                              if (file) {
+                                try { await handleUploadEdited(assignment.id, file); } catch (err) { alert(err instanceof Error ? err.message : 'Upload failed'); }
+                              }
+                            }}
+                            className="block w-full text-xs text-gray-400 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-orange-600 file:text-white hover:file:bg-orange-500"
+                          />
+                        ) : (
+                          <span className="text-xs text-green-400">Uploaded</span>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -640,7 +664,7 @@ export default function TrendsGrid() {
                   onChange={(e) => setSelectedModel(e.target.value)}
                   className="w-full px-3 py-2 bg-[#0f0f1a] border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="">â Select a model (optional) â</option>
+                  <option value="">Ã¢ÂÂ Select a model (optional) Ã¢ÂÂ</option>
                   {models.map((m) => (
                     <option key={m.id} value={m.id}>{m.name}</option>
                   ))}
