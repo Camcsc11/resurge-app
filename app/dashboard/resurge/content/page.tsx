@@ -200,9 +200,6 @@ export default function ContentCreationPage() {
       a.status === 'submitted' ||
       a.status === 'approved_for_editing'
   );
-  const inEditingAssignments = assignments.filter(
-    (a) => a.status === 'in_editing'
-  );
   const pendingReviewAssignments = assignments.filter(
     (a) => a.status === 'pending_review'
   );
@@ -425,63 +422,6 @@ export default function ContentCreationPage() {
                       {assignment.review_notes}
                     </div>
                   )}
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* In Editing - Editor uploads finished product */}
-        <section className="mb-12">
-          <h2 className="text-2xl font-bold text-white mb-4">
-            In Editing
-          </h2>
-          {inEditingAssignments.length === 0 ? (
-            <div className="bg-[#1a1a2e] border border-gray-700 rounded-lg p-8 text-center text-gray-400">
-              No videos currently being edited
-            </div>
-          ) : (
-            <div className="grid gap-4">
-              {inEditingAssignments.map((assignment) => (
-                <div
-                  key={assignment.id}
-                  className="bg-[#1a1a2e] border border-gray-700 rounded-lg p-6"
-                >
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-lg font-semibold text-white">
-                        {assignment.ofm_reels.title}
-                      </h3>
-                      <p className="text-sm text-gray-400 mt-1">
-                        {assignment.ofm_reels.description}
-                      </p>
-                    </div>
-                    <span className="bg-orange-600 text-white text-xs font-medium px-3 py-1 rounded-full">
-                      In Editing
-                    </span>
-                  </div>
-                  {/* Editor Upload Area */}
-                  <div className="mt-4 p-4 bg-black/20 border border-orange-500/30 rounded-lg">
-                    <h4 className="text-sm font-medium text-gray-300 mb-3">Upload Edited Video</h4>
-                    <input
-                      type="file"
-                      accept="video/mp4,video/quicktime,video/webm"
-                      onChange={(e) => {
-                        const file = e.currentTarget.files?.[0];
-                        if (file) {
-                          handleVideoUpload(assignment.id, file, 'edited');
-                        }
-                      }}
-                      disabled={uploadingAssignmentId === assignment.id}
-                      className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-orange-600 file:text-white hover:file:bg-orange-500"
-                    />
-                    {uploadingAssignmentId === assignment.id && (
-                      <p className="text-sm text-orange-400 mt-2">Uploading edited video and submitting for review...</p>
-                    )}
-                    {uploadError && (
-                      <p className="text-sm text-red-400 mt-1">{uploadError}</p>
-                    )}
-                  </div>
                 </div>
               ))}
             </div>
