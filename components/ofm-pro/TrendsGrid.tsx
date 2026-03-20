@@ -366,6 +366,9 @@ export default function TrendsGrid() {
 
   const filteredAssignments = useMemo(() => {
     if (statusFilter === 'all') return assignments;
+    if (statusFilter === 'pending_review') {
+      return assignments.filter((a) => a.status === 'pending_review' || a.status === 'approved_for_editing' || a.status === 'in_editing');
+    }
     return assignments.filter((a) => a.status === statusFilter);
   }, [assignments, statusFilter]);
 
@@ -564,6 +567,11 @@ export default function TrendsGrid() {
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">
                     Assigned
                   </th>
+                  {statusFilter === 'pending_review' && (
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">
+                      Upload Finished Reel
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -590,6 +598,25 @@ export default function TrendsGrid() {
                     <td className="px-6 py-4 text-sm text-gray-400">
                       {new Date(assignment.assigned_at).toLocaleDateString()}
                     </td>
+                    {statusFilter === 'pending_review' && (
+                      <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                        {(assignment.status === 'approved_for_editing' || assignment.status === 'in_editing') ? (
+                          <input
+                            type="file"
+                            accept="video/mp4,video/quicktime,video/webm"
+                            onChange={async (e) => {
+                              const file = e.currentTarget.files?.[0];
+                              if (file) {
+                                try { await handleUploadEdited(assignment.id, file); } catch (err) { alert(err instanceof Error ? err.message : 'Upload failed'); }
+                              }
+                            }}
+                            className="block w-full text-xs text-gray-400 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-orange-600 file:text-white hover:file:bg-orange-500"
+                          />
+                        ) : (
+                          <span className="text-xs text-green-400">Uploaded</span>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
