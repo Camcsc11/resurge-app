@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { ExternalLink, Download, Check, X, Plus } from 'lucide-react';
+import { ExternalLink, Download, Check, X, Plus, Upload } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
 
 type AssignmentStatus =
   | 'pending'
@@ -61,14 +62,18 @@ function AssignmentDetailModal({
   onClose,
   onApprove,
   onRequestChanges,
+  onUploadEdited,
 }: {
   assignment: Assignment;
   onClose: () => void;
   onApprove: (assignmentId: string) => void;
   onRequestChanges: (assignmentId: string, notes: string) => void;
+  onUploadEdited: (assignmentId: string, file: File) => Promise<void>;
 }) {
   const [reviewNotes, setReviewNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const canApprove =
     assignment.status === 'submitted' ||
@@ -179,6 +184,41 @@ function AssignmentDetailModal({
               <Download className="w-4 h-4" />
               Download Edited Version
             </a>
+          </div>
+        )}
+
+        {/* Editor Upload - for in_editing assignments */}
+        {assignment.status === 'in_editing' && (
+          <div className="mb-6 p-4 bg-black/20 border border-orange-500/30 rounded-lg">
+            <h3 className="text-sm font-semibold text-gray-300 mb-3">
+              Upload Edited Video
+            </h3>
+            <input
+              type="file"
+              accept="video/mp4,video/quicktime,video/webm"
+              onChange={async (e) => {
+                const file = e.currentTarget.files?.[0];
+                if (file) {
+                  setIsUploading(true);
+                  setUploadError(null);
+                  try {
+                    await onUploadEdited(assignment.id, file);
+                  } catch (err) {
+                    setUploadError(err instanceof Error ? err.message : 'Upload failed');
+                  } finally {
+                    setIsUploading(false);
+                  }
+                }
+              }}
+              disabled={isUploading}
+              className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-orange-600 file:text-white hover:file:bg-orange-500"
+            />
+            {isUploading && (
+              <p className="text-sm text-orange-400 mt-2">Uploading edited video and submitting for review...</p>
+            )}
+            {uploadError && (
+              <p className="text-sm text-red-400 mt-1">{uploadError}</p>
+            )}
           </div>
         )}
 
@@ -394,6 +434,43 @@ export default function TrendsGrid() {
     }
   };
 
+  const handleUploadEdited = async (assignmentId: string, file: File) => {
+    const supabase = createClient();
+    const filePath = `${assignmentId}/edited.mp4`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('content-submissions')
+      .upload(filePath, file, { upsert: true });
+
+    if (uploadError) {
+      throw new Error(uploadError.message || 'Upload failed');
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('content-submissions')
+      .getPublicUrl(filePath);
+
+    const res = await fetch('/api/content-assignments', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        assignment_id: assignmentId,
+        new_status: 'pending_review',
+        edited_url: publicUrl,
+      }),
+    });
+
+    if (!res.ok) throw new Error('Failed to update assignment');
+
+    const data = await res.json();
+    setAssignments((prev) =>
+      prev.map((a) =>
+        a.id === assignmentId ? { ...a, ...data.assignment } : a
+      )
+    );
+    setSelectedAssignment(null);
+  };
+
   return (
     <div className="h-full overflow-y-auto bg-[#0f0f1a]">
       <div className="p-6 max-w-6xl mx-auto">
@@ -510,12 +587,13 @@ export default function TrendsGrid() {
           onClose={() => setSelectedAssignment(null)}
           onApprove={handleApprove}
           onRequestChanges={handleRequestChanges}
+          onUploadEdited={handleUploadEdited}
         />
       )}
 
       {/* Add Reel Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black-60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="bg-[#1a1a2e] rounded-xl border border-gray-700 p-6 w-full max-w-md shadow-2xl">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-white">Add Reel</h2>
