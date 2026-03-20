@@ -507,10 +507,11 @@ export default function ContentCreationPage() {
                     </span>
                   </div>
                   <div className="flex gap-3">
-                    {assignment.edited_url && (
+                    {(assignment.edited_url || assignment.submission_url) && (
                       <a
-                        href={assignment.edited_url}
-                        download
+                        href={`${assignment.edited_url || assignment.submission_url}?download=`}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                       >
                         <Download className="w-4 h-4" />
